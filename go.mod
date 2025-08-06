@@ -1,6 +1,6 @@
 module github.com/USA-RedDragon/mesh-manager
 
-go 1.24.5
+go 1.24.6
 
 require (
 	github.com/JGLTechnologies/gin-rate-limit v1.5.6
