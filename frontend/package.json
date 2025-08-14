@@ -27,7 +27,7 @@
     "pretty-bytes": "^7.0.1",
     "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",
-    "primevue": "^3.53.1",
+    "primevue": "^4.3.7",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"
   },
