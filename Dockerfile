@@ -1,4 +1,4 @@
-FROM node:22.17.1-alpine AS frontend-build
+FROM node:22.18.0-alpine AS frontend-build
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ ENV NODE_ENV=production
 
 RUN npm run build -- --base=/a/
 
-FROM node:22.17.1-alpine AS new-frontend-build
+FROM node:22.18.0-alpine AS new-frontend-build
 
 WORKDIR /app
 
