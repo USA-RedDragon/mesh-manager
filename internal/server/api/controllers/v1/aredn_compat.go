@@ -16,6 +16,7 @@ import (
 	"github.com/USA-RedDragon/mesh-manager/internal/db/models"
 	"github.com/USA-RedDragon/mesh-manager/internal/server/api/apimodels"
 	"github.com/USA-RedDragon/mesh-manager/internal/server/api/middleware"
+	"github.com/USA-RedDragon/mesh-manager/internal/services/meshlink"
 	"github.com/USA-RedDragon/mesh-manager/internal/services/olsr"
 	"github.com/USA-RedDragon/mesh-manager/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -113,6 +114,20 @@ func GETSysinfo(c *gin.Context) {
 		return
 	}
 
+	wgTunnels, err := models.CountWireguardTunnels(di.DB)
+	if err != nil {
+		slog.Error("GETSysinfo: Unable to get wireguard tunnels", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		return
+	}
+
+	legacyTunnels, err := models.CountLegacyTunnels(di.DB)
+	if err != nil {
+		slog.Error("GETSysinfo: Unable to get legacy tunnels", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		return
+	}
+
 	var info syscall.Sysinfo_t
 	err = syscall.Sysinfo(&info)
 	if err != nil {
@@ -150,7 +165,7 @@ func GETSysinfo(c *gin.Context) {
 				float64(info.Loads[2]) / float64(1<<16),
 			},
 		},
-		APIVersion: "1.11",
+		APIVersion: "1.14",
 		MeshRF: apimodels.MeshRF{
 			Status: "off",
 		},
@@ -167,6 +182,8 @@ func GETSysinfo(c *gin.Context) {
 		},
 		Tunnels: apimodels.Tunnels{
 			ActiveTunnelCount: activeTunnels,
+			WireguardTunnelCount: wgTunnels,
+			LegacyTunnelCount: legacyTunnels,
 		},
 		LQM: apimodels.LQM{
 			Enabled: false,
@@ -175,7 +192,7 @@ func GETSysinfo(c *gin.Context) {
 	}
 
 	if doHosts {
-		sysinfo.Hosts = getHosts(di.OLSRHostsParser)
+		sysinfo.Hosts = getHosts(di.OLSRHostsParser, di.MeshLinkParser)
 	}
 
 	if doServices {
@@ -228,8 +245,9 @@ var (
 	regexDtd = regexp.MustCompile(`^dtdlink\..*`)
 )
 
-func getHosts(parser *olsr.HostsParser) []apimodels.Host {
-	hosts := parser.GetHosts()
+func getHosts(olsrParser *olsr.HostsParser, meshlinkParser *meshlink.Parser) []apimodels.Host {
+	hosts := olsrParser.GetHosts()
+	meshlinkHosts := meshlinkParser.GetHosts()
 	ret := []apimodels.Host{}
 	for _, host := range hosts {
 		match := regexMid.Match([]byte(host.Hostname))
@@ -242,6 +260,12 @@ func getHosts(parser *olsr.HostsParser) []apimodels.Host {
 			continue
 		}
 
+		ret = append(ret, apimodels.Host{
+			Name: host.Hostname,
+			IP:   host.IP.String(),
+		})
+	}
+	for _, host := range meshlinkHosts {
 		ret = append(ret, apimodels.Host{
 			Name: host.Hostname,
 			IP:   host.IP.String(),

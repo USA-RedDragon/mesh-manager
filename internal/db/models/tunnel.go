@@ -87,6 +87,12 @@ func CountWireguardTunnels(db *gorm.DB) (int, error) {
 	return int(count), err
 }
 
+func CountLegacyTunnels(db *gorm.DB) (int, error) {
+	var count int64
+	err := db.Model(&Tunnel{}).Where("wireguard = ?", false).Count(&count).Error
+	return int(count), err
+}
+
 func CountAllActiveTunnels(db *gorm.DB) (int, error) {
 	var count int64
 	err := db.Model(&Tunnel{}).Where("active = ?", true).Count(&count).Error
