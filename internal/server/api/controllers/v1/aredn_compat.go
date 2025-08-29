@@ -248,29 +248,34 @@ var (
 func getHosts(olsrParser *olsr.HostsParser, meshlinkParser *meshlink.Parser) []apimodels.Host {
 	hosts := olsrParser.GetHosts()
 	meshlinkHosts := meshlinkParser.GetHosts()
+	hostsMap := make(map[string]net.IP)
 	ret := []apimodels.Host{}
 	for _, host := range hosts {
-		match := regexMid.Match([]byte(host.Hostname))
-		if match {
+		if regexMid.Match([]byte(host.Hostname)) {
 			continue
 		}
 
-		match = regexDtd.Match([]byte(host.Hostname))
-		if match {
+		if regexDtd.Match([]byte(host.Hostname)) {
 			continue
 		}
 
-		ret = append(ret, apimodels.Host{
-			Name: host.Hostname,
-			IP:   host.IP.String(),
-		})
+		hostsMap[host.Hostname] = host.IP
 	}
 	for _, host := range meshlinkHosts {
+		if regexDtd.Match([]byte(host.Hostname)) {
+			continue
+		}
+
+		hostsMap[host.Hostname] = host.IP
+	}
+
+	for hostname, ip := range hostsMap {
 		ret = append(ret, apimodels.Host{
-			Name: host.Hostname,
-			IP:   host.IP.String(),
+			Name: hostname,
+			IP:   ip.String(),
 		})
 	}
+
 	return ret
 }
 
