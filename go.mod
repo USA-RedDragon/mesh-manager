@@ -17,7 +17,7 @@ require (
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/prometheus/client_golang v1.23.0
 	github.com/puzpuzpuz/xsync/v4 v4.1.0
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.0
 	github.com/vishvananda/netlink v1.3.1
 	github.com/ztrue/shutdown v0.1.1
 	go.opentelemetry.io/otel v1.38.0
@@ -77,7 +77,7 @@ require (
 	github.com/redis/go-redis/v9 v9.7.3 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.8 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
