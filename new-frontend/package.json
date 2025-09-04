@@ -19,7 +19,7 @@
     "lint:report": "npm run lint -- --output-file eslint_report.json --format json"
   },
   "dependencies": {
-    "@tailwindcss/vite": "4.1.12",
+    "@tailwindcss/vite": "4.1.13",
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vuelidate/core": "2.0.3",
     "@vuelidate/validators": "2.0.4",
@@ -36,7 +36,7 @@
     "primevue": "3.53.1",
     "reka-ui": "2.5.0",
     "tailwind-merge": "3.3.1",
-    "tailwindcss": "4.1.12",
+    "tailwindcss": "4.1.13",
     "tw-animate-css": "1.3.8",
     "vue": "3.5.21",
     "vue-router": "4.5.1"
