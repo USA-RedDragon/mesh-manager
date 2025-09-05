@@ -70,7 +70,7 @@
     "mochawesome-report-generator": "6.2.0",
     "prettier": "3.6.2",
     "sass": "1.92.0",
-    "start-server-and-test": "2.0.13",
+    "start-server-and-test": "2.1.0",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.42.0",
     "vite": "6.3.5",
