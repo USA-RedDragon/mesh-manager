@@ -49,7 +49,7 @@
     "mochawesome-merge": "^5.0.0",
     "mochawesome-report-generator": "^6.2.0",
     "prettier": "^3.6.2",
-    "sass": "^1.92.0",
+    "sass": "^1.92.1",
     "start-server-and-test": "^2.1.0",
     "vite": "^6.3.5",
     "vitest": "^3.2.4"
