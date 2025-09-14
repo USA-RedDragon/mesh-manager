@@ -16,7 +16,7 @@ require (
 	github.com/mavjs/goPwned v0.0.2
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/prometheus/client_golang v1.23.2
-	github.com/puzpuzpuz/xsync/v4 v4.1.0
+	github.com/puzpuzpuz/xsync/v4 v4.2.0
 	github.com/spf13/cobra v1.10.1
 	github.com/vishvananda/netlink v1.3.1
 	github.com/ztrue/shutdown v0.1.1
