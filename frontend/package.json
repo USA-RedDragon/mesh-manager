@@ -45,7 +45,7 @@
     "eslint-plugin-cypress": "^3.6.0",
     "eslint-plugin-vue": "^9.33.0",
     "mocha-junit-reporter": "^2.2.1",
-    "mochawesome": "^7.1.3",
+    "mochawesome": "^7.1.4",
     "mochawesome-merge": "^5.0.0",
     "mochawesome-report-generator": "^6.2.0",
     "prettier": "^3.6.2",
