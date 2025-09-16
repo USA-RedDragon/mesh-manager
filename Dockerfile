@@ -24,7 +24,7 @@ ENV NODE_ENV=production
 
 RUN npm run build -- --base=/b/
 
-FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:84dd2d2b08aac476bf35f210957e184fae3836469fb909d123bb37c5d1a16693
+FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:8a0e4ddf44f51660eae6c2f0f40184124f8c22d8e7eea8b1f3f4b135a291f9ff
 
 COPY --from=frontend-build /app/dist /www
 COPY --from=new-frontend-build /app/dist /new-www
