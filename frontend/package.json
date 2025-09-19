@@ -50,7 +50,7 @@
     "mochawesome-report-generator": "^6.3.0",
     "prettier": "^3.6.2",
     "sass": "^1.92.1",
-    "start-server-and-test": "^2.1.1",
+    "start-server-and-test": "^2.1.2",
     "vite": "^6.3.6",
     "vitest": "^3.2.4"
   }
