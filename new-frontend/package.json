@@ -72,7 +72,7 @@
     "sass": "1.93.3",
     "start-server-and-test": "2.1.2",
     "typescript": "5.9.3",
-    "typescript-eslint": "^8.46.3",
+    "typescript-eslint": "^8.46.4",
     "vite": "6.4.1",
     "vitest": "3.2.4",
     "vue-tsc": "2.2.12"
