@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
+	"os/exec"
 	"regexp"
 	"strings"
 	"syscall"
@@ -21,6 +23,131 @@ import (
 	"github.com/USA-RedDragon/mesh-manager/internal/utils"
 	"github.com/gin-gonic/gin"
 )
+
+func GETIPerf(c *gin.Context) {
+	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
+	if !ok {
+		slog.Error("Unable to get dependencies from context")
+		c.Data(http.StatusInternalServerError, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>Try again later</pre></body></html>\n"))
+		return
+	}
+
+	server := c.Query("server")
+	protocol := c.DefaultQuery("protocol", "tcp")
+	killParam := c.Query("kill")
+	kill := killParam == "1"
+
+	if server == "" {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>Provide a server name to run a test between this client and a server [/cgi-bin/iperf?server=&lt;ServerName&gt;&amp;protocol=&lt;udp|tcp&gt;]</pre></body></html>\n"))
+		return
+	}
+
+	// Validate server name - only allow alphanumeric, dots, and hyphens
+	for _, ch := range server {
+		if !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '.' || ch == '-') {
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>Illegal server name</pre></body></html>\n"))
+			return
+		}
+	}
+
+	if server == "" {
+		// iperf server mode - not implemented for this application
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>Server mode not supported</pre></body></html>\n"))
+		return
+	}
+
+	// iperf client mode
+	// Add .local.mesh if no dots in the name
+	if !strings.Contains(server, ".") {
+		server += ".local.mesh"
+	}
+
+	// Resolve the hostname to an IP
+	ips, err := net.LookupIP(server)
+	if err != nil || len(ips) == 0 {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER ERROR</title></head><body><pre>iperf no such server</pre></body></html>\n"))
+		return
+	}
+
+	ip := ips[0].String()
+
+	// Call the remote server to start iperf server
+	client := http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	remoteURL := fmt.Sprintf("http://%s:8080/cgi-bin/iperf?", ip)
+	if kill {
+		remoteURL += "kill=1&"
+	}
+	remoteURL += "server="
+
+	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, remoteURL, nil)
+	if err != nil {
+		slog.Error("GETIPerf: Unable to create request", "error", err)
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>CLIENT ERROR</title></head><body><pre>iperf failed to call remote server</pre></body></html>\n"))
+		return
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		slog.Error("GETIPerf: Unable to call remote server", "error", err)
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>CLIENT ERROR</title></head><body><pre>iperf failed to call remote server</pre></body></html>\n"))
+		return
+	}
+	defer resp.Body.Close()
+
+	// Read the response to check status
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		slog.Error("GETIPerf: Unable to read response", "error", err)
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>iperf unknown error</pre></body></html>\n"))
+		return
+	}
+
+	responseStr := string(body)
+
+	if strings.Contains(responseStr, "CLIENT DISABLED") {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER DISABLED</title></head><body><pre>iperf server is disabled</pre></body></html>\n"))
+		return
+	}
+
+	if strings.Contains(responseStr, "BUSY") {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER BUSY</title></head><body><pre>iperf server is busy</pre></body></html>\n"))
+		return
+	}
+
+	if strings.Contains(responseStr, "ERROR") {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER ERROR</title></head><body><pre>iperf server error</pre></body></html>\n"))
+		return
+	}
+
+	if strings.Contains(responseStr, "RUNNING") {
+		// Server is ready, run iperf3 client
+		var cmd *exec.Cmd
+		if protocol == "udp" {
+			cmd = exec.CommandContext(c.Request.Context(), "/usr/bin/iperf3", "--forceflush", "--rcv-timeout", "20000", "-b", "0", "-Z", "-c", ip, "-u", "-l", "16K")
+		} else {
+			cmd = exec.CommandContext(c.Request.Context(), "/usr/bin/iperf3", "--forceflush", "--rcv-timeout", "20000", "-b", "0", "-Z", "-c", ip, "-l", "16K")
+		}
+
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			slog.Error("GETIPerf: iperf3 client failed", "error", err, "output", string(output))
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>CLIENT ERROR</title></head><body><pre>iperf client failed</pre></body></html>\n"))
+			return
+		}
+
+		// Format the response
+		response := fmt.Sprintf("<html><head><title>SUCCESS</title></head><body><pre>Client: %s\nServer: %s\n%s</pre></body></html>\n",
+			di.Config.ServerName, server, string(output))
+		c.Data(http.StatusOK, "text/html", []byte(response))
+		return
+	}
+
+	// Unknown response
+	c.Data(http.StatusOK, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>iperf unknown error</pre></body></html>\n"))
+}
 
 func GETMesh(c *gin.Context) {
 	c.Redirect(http.StatusMovedPermanently, "/nodes")
