@@ -1,13 +1,16 @@
 package v1
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
+	"os/exec"
 	"regexp"
 	"strings"
 	"syscall"
@@ -21,6 +24,214 @@ import (
 	"github.com/USA-RedDragon/mesh-manager/internal/utils"
 	"github.com/gin-gonic/gin"
 )
+
+func GETIPerf(c *gin.Context) {
+	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
+	if !ok {
+		slog.Error("Unable to get dependencies from context")
+		c.Data(http.StatusInternalServerError, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>Try again later</pre></body></html>\n"))
+		return
+	}
+
+	c.Header("Cache-Control", "no-store")
+	c.Header("Access-Control-Allow-Origin", "*")
+
+	server, serverExists := c.GetQuery("server")
+	if !serverExists {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>Provide a server name to run a test between this client and a server [/cgi-bin/iperf?server=&lt;ServerName&gt;&amp;protocol=&lt;udp|tcp&gt;]</pre></body></html>\n"))
+		return
+	}
+
+	protocol := c.DefaultQuery("protocol", "tcp")
+	killParam := c.Query("kill")
+	kill := killParam == "1"
+
+	// Validate server name - only allow alphanumeric, dots, and hyphens
+	for _, ch := range server {
+		if !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '.' || ch == '-') {
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>Illegal server name</pre></body></html>\n"))
+			return
+		}
+	}
+
+	if server == "" {
+		// iperf server mode
+		if kill {
+			// Kill any running iperf3 processes
+			cmd := exec.Command("/usr/bin/killall", "-9", "iperf3")
+			_ = cmd.Run() // Ignore errors
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>KILLED</title></head><body><pre>iperf server killed</pre></body></html>\n"))
+			return
+		}
+
+		// Check if iperf3 is already running
+		pidofCmd := exec.Command("/bin/pidof", "iperf3")
+		output, err := pidofCmd.Output()
+		if err == nil && len(output) > 0 {
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>BUSY</title></head><body><pre>iperf server busy</pre></body></html>\n"))
+			return
+		}
+
+		// Start iperf3 server
+		// Use -s (server mode), -1 (one connection then exit), --idle-timeout 20 (20 second timeout)
+		// --forceflush (flush output), -B 0.0.0.0 (bind to all interfaces)
+		serverCmd := exec.Command("/usr/bin/iperf3", "-s", "-1", "--idle-timeout", "20", "--forceflush", "-B", "0.0.0.0")
+		
+		stdout, err := serverCmd.StdoutPipe()
+		if err != nil {
+			slog.Error("GETIPerf: Unable to create stdout pipe", "error", err)
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER ERROR</title></head><body><pre>iperf server failed to start</pre></body></html>\n"))
+			return
+		}
+
+		if err := serverCmd.Start(); err != nil {
+			slog.Error("GETIPerf: Unable to start iperf3 server", "error", err)
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER ERROR</title></head><body><pre>iperf server failed to start</pre></body></html>\n"))
+			return
+		}
+
+		// Read one line to ensure it started
+		buf := make([]byte, 1024)
+		_, _ = stdout.Read(buf)
+
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>RUNNING</title></head><body><pre>iperf server running</pre></body></html>\n"))
+		return
+	}
+
+	// iperf client mode
+	// Add .local.mesh if no dots in the name
+	if !strings.Contains(server, ".") {
+		server += ".local.mesh"
+	}
+
+	// Resolve the hostname to an IP
+	ips, err := net.LookupIP(server)
+	if err != nil || len(ips) == 0 {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER ERROR</title></head><body><pre>iperf no such server</pre></body></html>\n"))
+		return
+	}
+
+	ip := ips[0].String()
+
+	// Additional validation: ensure IP is valid IPv4 or IPv6
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER ERROR</title></head><body><pre>Invalid IP address resolved</pre></body></html>\n"))
+		return
+	}
+
+	// Call the remote server to start iperf server
+	client := http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	remoteURL := fmt.Sprintf("http://%s:8080/cgi-bin/iperf?", ip)
+	if kill {
+		remoteURL += "kill=1&"
+	}
+	remoteURL += "server="
+
+	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, remoteURL, nil)
+	if err != nil {
+		slog.Error("GETIPerf: Unable to create request", "error", err)
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>CLIENT ERROR</title></head><body><pre>iperf failed to call remote server</pre></body></html>\n"))
+		return
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		slog.Error("GETIPerf: Unable to call remote server", "error", err)
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>CLIENT ERROR</title></head><body><pre>iperf failed to call remote server</pre></body></html>\n"))
+		return
+	}
+	defer resp.Body.Close()
+
+	// Read the response to check status
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		slog.Error("GETIPerf: Unable to read response", "error", err)
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>iperf unknown error</pre></body></html>\n"))
+		return
+	}
+
+	responseStr := string(body)
+
+	if strings.Contains(responseStr, "CLIENT DISABLED") {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER DISABLED</title></head><body><pre>iperf server is disabled</pre></body></html>\n"))
+		return
+	}
+
+	if strings.Contains(responseStr, "BUSY") {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER BUSY</title></head><body><pre>iperf server is busy</pre></body></html>\n"))
+		return
+	}
+
+	if strings.Contains(responseStr, "ERROR") {
+		c.Data(http.StatusOK, "text/html", []byte("<html><head><title>SERVER ERROR</title></head><body><pre>iperf server error</pre></body></html>\n"))
+		return
+	}
+
+	if strings.Contains(responseStr, "RUNNING") {
+		// Server is ready, run iperf3 client
+		// Build args slice safely - never pass user input directly to shell
+		args := []string{
+			"--forceflush",
+			"--rcv-timeout", "20000",
+			"-b", "0",
+			"-Z",
+			"-c", ip,
+			"-l", "16K",
+		}
+
+		if protocol == "udp" {
+			args = append(args, "-u")
+		}
+
+		cmd := exec.CommandContext(c.Request.Context(), "/usr/bin/iperf3", args...)
+		// Merge stderr into stdout
+		cmd.Stderr = cmd.Stdout
+
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			slog.Error("GETIPerf: Unable to create stdout pipe", "error", err)
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>CLIENT ERROR</title></head><body><pre>iperf client failed</pre></body></html>\n"))
+			return
+		}
+
+		if err := cmd.Start(); err != nil {
+			slog.Error("GETIPerf: iperf3 client failed to start", "error", err)
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>CLIENT ERROR</title></head><body><pre>iperf client failed</pre></body></html>\n"))
+			return
+		}
+
+		// Send the initial success header
+		c.Status(http.StatusOK)
+		c.Header("Content-Type", "text/html")
+		c.Writer.Write([]byte("<html><head><title>SUCCESS</title></head>"))
+		c.Writer.Write([]byte(fmt.Sprintf("<body><pre>Client: %s\nServer: %s\n", di.Config.ServerName, server)))
+		c.Writer.Flush()
+
+		// Stream the output
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			c.Writer.Write(scanner.Bytes())
+			c.Writer.Write([]byte("\n"))
+			c.Writer.Flush()
+		}
+
+		if err := cmd.Wait(); err != nil {
+			slog.Error("GETIPerf: iperf3 client failed", "error", err)
+			// We can't really change the status code now, but we can log it
+		}
+
+		c.Writer.Write([]byte("</pre></body></html>\n"))
+		c.Writer.Flush()
+		return
+	}
+
+	// Unknown response
+	c.Data(http.StatusOK, "text/html", []byte("<html><head><title>ERROR</title></head><body><pre>iperf unknown error</pre></body></html>\n"))
+}
 
 func GETMesh(c *gin.Context) {
 	c.Redirect(http.StatusMovedPermanently, "/nodes")

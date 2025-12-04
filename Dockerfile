@@ -31,7 +31,8 @@ COPY --from=new-frontend-build /app/dist /new-www
 
 RUN apk add --no-cache \
     nginx \
-    socat
+    socat \
+    iperf3
 
 COPY --chown=root:root docker/rootfs/. /
 
