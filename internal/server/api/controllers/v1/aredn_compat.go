@@ -188,12 +188,18 @@ func GETIPerf(c *gin.Context) {
 		}
 
 		cmd := exec.CommandContext(c.Request.Context(), "/usr/bin/iperf3", args...)
-		// Merge stderr into stdout
-		cmd.Stderr = cmd.Stdout
 
-		stdout, err := cmd.StdoutPipe()
+		// Create pipes for both stdout and stderr
+		stdoutPipe, err := cmd.StdoutPipe()
 		if err != nil {
 			slog.Error("GETIPerf: Unable to create stdout pipe", "error", err)
+			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>CLIENT ERROR</title></head><body><pre>iperf client failed</pre></body></html>\n"))
+			return
+		}
+		
+		stderrPipe, err := cmd.StderrPipe()
+		if err != nil {
+			slog.Error("GETIPerf: Unable to create stderr pipe", "error", err)
 			c.Data(http.StatusOK, "text/html", []byte("<html><head><title>CLIENT ERROR</title></head><body><pre>iperf client failed</pre></body></html>\n"))
 			return
 		}
@@ -216,8 +222,22 @@ func GETIPerf(c *gin.Context) {
 			c.Writer.Flush()
 		}
 
-		// Stream the output
-		scanner := bufio.NewScanner(stdout)
+		// Stream stderr output (where iperf3 writes its progress)
+		go func() {
+			scanner := bufio.NewScanner(stderrPipe)
+			for scanner.Scan() {
+				c.Writer.Write(scanner.Bytes())
+				c.Writer.Write([]byte("\n"))
+				if f, ok := c.Writer.(http.Flusher); ok {
+					f.Flush()
+				} else {
+					c.Writer.Flush()
+				}
+			}
+		}()
+
+		// Stream stdout output
+		scanner := bufio.NewScanner(stdoutPipe)
 		for scanner.Scan() {
 			c.Writer.Write(scanner.Bytes())
 			c.Writer.Write([]byte("\n"))
