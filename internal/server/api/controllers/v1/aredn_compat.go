@@ -134,7 +134,7 @@ func GETIPerf(c *gin.Context) {
 				return
 			} else if strings.Contains(line, "RUNNING") {
 				// Start local client
-				args := []string{"--forceflush", "--rcv-timeout", "20000", "-b", "0", "-Z", "-c", ip, "-l", "16K"}
+				args := []string{"--forceflush", "-b", "0", "-Z", "-c", ip, "-l", "16K"}
 				if protocol == "udp" {
 					args = append(args, "-u")
 				}
