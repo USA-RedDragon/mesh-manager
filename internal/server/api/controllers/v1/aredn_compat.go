@@ -207,16 +207,25 @@ func GETIPerf(c *gin.Context) {
 		// Send the initial success header
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html")
+		c.Header("X-Content-Type-Options", "nosniff")
 		c.Writer.Write([]byte("<html><head><title>SUCCESS</title></head>"))
 		c.Writer.Write([]byte(fmt.Sprintf("<body><pre>Client: %s\nServer: %s\n", di.Config.ServerName, server)))
-		c.Writer.Flush()
+		if f, ok := c.Writer.(http.Flusher); ok {
+			f.Flush()
+		} else {
+			c.Writer.Flush()
+		}
 
 		// Stream the output
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			c.Writer.Write(scanner.Bytes())
 			c.Writer.Write([]byte("\n"))
-			c.Writer.Flush()
+			if f, ok := c.Writer.(http.Flusher); ok {
+				f.Flush()
+			} else {
+				c.Writer.Flush()
+			}
 		}
 
 		if err := cmd.Wait(); err != nil {

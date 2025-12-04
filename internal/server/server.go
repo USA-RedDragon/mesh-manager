@@ -60,11 +60,6 @@ func (s *Server) Run(version string, registry *services.Registry) error {
 
 	api.ApplyRoutes(r, s.eventsChannel, s.config)
 
-	writeTimeout := defTimeout
-	if s.config.PProf.Enabled {
-		writeTimeout = debugWriteTimeout
-	}
-
 	err := r.SetTrustedProxies(s.config.TrustedProxies)
 	if err != nil {
 		slog.Error("Failed to set trusted proxies", "error", err)
@@ -74,7 +69,7 @@ func (s *Server) Run(version string, registry *services.Registry) error {
 		Addr:         fmt.Sprintf("%s:%d", "127.0.0.1", s.config.Port),
 		Handler:      r,
 		ReadTimeout:  defTimeout,
-		WriteTimeout: writeTimeout,
+		WriteTimeout: 0,
 	}
 	server.SetKeepAlivesEnabled(false)
 
