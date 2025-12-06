@@ -104,8 +104,8 @@ func NewService(config *config.Config) *Service {
 	return &Service{
 		config:   config,
 		trackers: make(map[string]*Tracker),
-		pingSem:  semaphore.NewWeighted(10), // Limit concurrent pings
-		httpSem:  semaphore.NewWeighted(5),  // Limit concurrent HTTP requests
+		pingSem:  semaphore.NewWeighted(1), // Limit concurrent pings to 1 to avoid memory spikes from forking
+		httpSem:  semaphore.NewWeighted(1), // Limit concurrent HTTP requests to 1
 		httpClient: &http.Client{
 			Timeout: connectTimeout,
 			Transport: &http.Transport{
@@ -362,17 +362,30 @@ func (s *Service) remoteRefresh() {
 	}
 	s.mu.Unlock()
 
-	for _, t := range trackersToRefresh {
-		tracker := t
-		// We don't wait for these to finish, but we limit concurrency
-		go func() {
+	if len(trackersToRefresh) == 0 {
+		return
+	}
+
+	// Spawn a single coordinator goroutine to process the batch sequentially (or with limited concurrency)
+	// This prevents spawning thousands of goroutines if there are many trackers.
+	go func(trackers []*Tracker) {
+		for _, t := range trackers {
+			// Check context before proceeding
+			if s.ctx.Err() != nil {
+				return
+			}
+
+			// Acquire semaphore to limit concurrency (though we are serial here, it respects the global limit)
 			if err := s.httpSem.Acquire(s.ctx, 1); err != nil {
 				return
 			}
-			defer s.httpSem.Release(1)
-			s.refreshTracker(tracker)
-		}()
-	}
+			
+			// Process synchronously in the coordinator to avoid spawning more goroutines
+			// Since we only have 1 permit, this is effectively serial.
+			s.refreshTracker(t)
+			s.httpSem.Release(1)
+		}
+	}(trackersToRefresh)
 }
 
 func (s *Service) refreshTracker(t *Tracker) error {
@@ -490,21 +503,22 @@ func (s *Service) updateTrackingState() {
 	}
 	s.mu.Unlock()
 
-	var wg sync.WaitGroup
+	// Process trackers sequentially to avoid spawning many goroutines
+	// and to minimize memory usage from forking (ping6).
+	// Since pingSem is weighted 1, we just do it serially here.
 	for _, t := range trackers {
-		// Acquire semaphore BEFORE spawning goroutine to control memory usage
+		if s.ctx.Err() != nil {
+			break
+		}
+		
 		if err := s.pingSem.Acquire(s.ctx, 1); err != nil {
 			break
 		}
-		wg.Add(1)
-		go func(tracker *Tracker) {
-			defer s.pingSem.Release(1)
-			defer wg.Done()
-			s.pingTracker(tracker)
-			s.calculateQuality(tracker)
-		}(t)
+		
+		s.pingTracker(t)
+		s.calculateQuality(t)
+		s.pingSem.Release(1)
 	}
-	wg.Wait()
 }
 
 func (s *Service) pingTracker(t *Tracker) {
