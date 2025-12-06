@@ -77,6 +77,9 @@ ip rule add pref 140 lookup 27
 ip rule add pref 150 lookup 28
 ip rule add pref 160 lookup 22
 
+iptables -t nat -A POSTROUTING -o wgs+ -j SNAT --to-source 10.54.25.3
+iptables -t nat -A POSTROUTING -o wgc+ -j SNAT --to-source 10.54.25.3
+
 mkdir -p /etc/meshlink
 echo "${NODE_IP} ${SERVER_NAME}" >> /etc/meshlink/hosts
 if [ -n "$SUPERNODE" ]; then
