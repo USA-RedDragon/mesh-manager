@@ -18,6 +18,7 @@ const (
 	BabelServiceName    ServiceName = "babel"
 	DNSMasqServiceName  ServiceName = "dnsmasq"
 	MeshLinkServiceName ServiceName = "meshlink"
+	LQMServiceName      ServiceName = "lqm"
 )
 
 func NewServiceRegistry() *Registry {

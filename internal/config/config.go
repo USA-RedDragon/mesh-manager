@@ -63,6 +63,11 @@ type Config struct {
 	Metrics                  Metrics   `name:"metrics" description:"Metrics settings"`
 	Wireguard                Wireguard `name:"wireguard" description:"Wireguard settings"`
 	SessionSecret            string    `name:"session-secret" description:"Session secret"`
+	LQM                      LQM       `name:"lqm" description:"Link Quality Monitoring settings"`
+}
+
+type LQM struct {
+	Enabled bool `name:"enabled" description:"Enable Link Quality Monitoring" default:"true"`
 }
 
 var (

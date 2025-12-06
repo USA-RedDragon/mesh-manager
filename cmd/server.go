@@ -17,6 +17,7 @@ import (
 	"github.com/USA-RedDragon/mesh-manager/internal/services"
 	"github.com/USA-RedDragon/mesh-manager/internal/services/babel"
 	"github.com/USA-RedDragon/mesh-manager/internal/services/dnsmasq"
+	"github.com/USA-RedDragon/mesh-manager/internal/services/lqm"
 	"github.com/USA-RedDragon/mesh-manager/internal/services/meshlink"
 	"github.com/USA-RedDragon/mesh-manager/internal/services/olsr"
 	"github.com/USA-RedDragon/mesh-manager/internal/wireguard"
@@ -70,6 +71,7 @@ func runServer(cmd *cobra.Command, _ []string) error {
 		serviceRegistry.Register(services.MeshLinkServiceName, meshlink.NewService(config))
 	}
 	serviceRegistry.Register(services.DNSMasqServiceName, dnsmasq.NewService(config))
+	serviceRegistry.Register(services.LQMServiceName, lqm.NewService(config))
 
 	go serviceRegistry.StartAll()
 
