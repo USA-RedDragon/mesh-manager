@@ -77,9 +77,6 @@ ip rule add pref 140 lookup 27
 ip rule add pref 150 lookup 28
 ip rule add pref 160 lookup 22
 
-iptables -t nat -A POSTROUTING -o wgs+ -j SNAT --to-source 10.54.25.3
-iptables -t nat -A POSTROUTING -o wgc+ -j SNAT --to-source 10.54.25.3
-
 mkdir -p /etc/meshlink
 echo "${NODE_IP} ${SERVER_NAME}" >> /etc/meshlink/hosts
 if [ -n "$SUPERNODE" ]; then
@@ -87,6 +84,91 @@ if [ -n "$SUPERNODE" ]; then
 fi
 echo "${NODE_IP} dtdlink.${SERVER_NAME}.local.mesh" >> /etc/meshlink/hosts
 echo "http://${SERVER_NAME}/|tcp|${SERVER_NAME}-console" >> /etc/meshlink/services
+
+# Firewall
+
+iptables -F
+iptables -X
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
+
+iptables -P INPUT ACCEPT   # Start permissive to avoid lockout during setup
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+
+iptables -N ZONE_WAN_IN
+iptables -N ZONE_DTD_IN
+iptables -N ZONE_VPN_IN
+
+iptables -N ZONE_WAN_FWD
+iptables -N ZONE_DTD_FWD
+iptables -N ZONE_VPN_FWD
+
+iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A INPUT -i br-wan -j ZONE_WAN_IN
+iptables -A INPUT -i br-dtdlink -j ZONE_DTD_IN
+iptables -A INPUT -i wgs+ -j ZONE_VPN_IN  # WireGuard Servers
+iptables -A INPUT -i wgc+ -j ZONE_VPN_IN  # WireGuard Clients
+
+iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i br-wan -j ZONE_WAN_FWD
+iptables -A FORWARD -i br-dtdlink -j ZONE_DTD_FWD
+iptables -A FORWARD -i wgs+ -j ZONE_VPN_FWD
+iptables -A FORWARD -i wgc+ -j ZONE_VPN_FWD
+
+# WAN Zone
+# Allow Ping
+iptables -A ZONE_WAN_IN -p icmp --icmp-type echo-request -j ACCEPT
+iptables -A ZONE_WAN_IN -p tcp -m multiport --dports 80,8080 -j ACCEPT
+# We need to allow WIREGUARD_STARTING_PORT to WIREGUARD_STARTING_PORT+100 (udo)
+iptables -A ZONE_WAN_IN -p udp -m multiport --dports ${WIREGUARD_STARTING_PORT}:$((${WIREGUARD_STARTING_PORT}+100)) -j ACCEPT
+# Drop everything else
+iptables -A ZONE_WAN_IN -j REJECT --reject-with icmp-host-prohibited
+
+# NAT: Masquerade outbound WAN traffic (Internet Access)
+iptables -t nat -A POSTROUTING -o br-wan -j MASQUERADE
+
+# DTD Zone
+# Allow Ping
+iptables -A ZONE_DTD_IN -p icmp --icmp-type echo-request -j ACCEPT
+# Allow Management: HTTP (80/8080)
+iptables -A ZONE_DTD_IN -p tcp -m multiport --dports 80,8080 -j ACCEPT
+# Allow Routing/Mesh: OLSR (698), Babel (6696)
+iptables -A ZONE_DTD_IN -p udp -m multiport --dports 698,6696 -j ACCEPT
+# Allow DNS (53) if Supernode (13-supernode-rules)
+if [ -n "$SUPERNODE" ]; then
+    iptables -A ZONE_DTD_IN -p udp --dport 53 -j ACCEPT
+    iptables -A ZONE_DTD_IN -p tcp --dport 53 -j ACCEPT
+fi
+# Drop everything else
+iptables -A ZONE_DTD_IN -j REJECT --reject-with icmp-host-prohibited
+
+# VPN Zone (WireGuard)
+iptables -A ZONE_VPN_IN -p icmp --icmp-type echo-request -j ACCEPT
+iptables -A ZONE_VPN_IN -p tcp -m multiport --dports 80,8080 -j ACCEPT
+iptables -A ZONE_VPN_IN -p udp -m multiport --dports 698,6696 -j ACCEPT
+if [ -n "$SUPERNODE" ]; then
+    iptables -A ZONE_VPN_IN -p udp --dport 53 -j ACCEPT
+    iptables -A ZONE_VPN_IN -p tcp --dport 53 -j ACCEPT
+fi
+iptables -A ZONE_VPN_IN -j REJECT --reject-with icmp-host-prohibited
+
+iptables -t nat -A POSTROUTING -o wgs+ -j SNAT --to-source $NODE_IP
+iptables -t nat -A POSTROUTING -o wgc+ -j SNAT --to-source $NODE_IP
+
+# Allow DtD <-> VPN
+iptables -A ZONE_DTD_FWD -o wgs+ -j ACCEPT
+iptables -A ZONE_DTD_FWD -o wgc+ -j ACCEPT
+iptables -A ZONE_VPN_FWD -o br-dtdlink -j ACCEPT
+
+# Allow VPN <-> VPN
+iptables -A ZONE_VPN_FWD -o wgs+ -j ACCEPT
+iptables -A ZONE_VPN_FWD -o wgc+ -j ACCEPT
+
+iptables -P INPUT DROP
 
 sleep 3
 
