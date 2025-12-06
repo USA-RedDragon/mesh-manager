@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand"
 	"net"
@@ -194,13 +195,14 @@ func (s *Service) pruneTrackers(now time.Time) {
 func (s *Service) updateNeighbors() {
 	conn, err := net.Dial("unix", babelSocketPath)
 	if err != nil {
-		// fmt.Printf("Failed to connect to babel socket: %v\n", err)
+		slog.Error("Failed to connect to babel socket", "error", err)
 		return
 	}
 	defer conn.Close()
 
 	_, err = conn.Write([]byte("dump-neighbors\n"))
 	if err != nil {
+		slog.Error("Failed to write to babel socket", "error", err)
 		return
 	}
 
@@ -232,10 +234,12 @@ func (s *Service) updateNeighbors() {
 
 			devType := deviceToType(iface)
 			if devType == "" {
+				slog.Warn("Skipping neighbor on unsupported interface", "iface", iface, "mac", mac)
 				continue
 			}
 
 			if !exists {
+				slog.Info("New neighbor detected", "mac", mac, "iface", iface, "type", devType)
 				tracker = &Tracker{
 					LastSeen: now,
 					LastUp:   now,
@@ -276,6 +280,8 @@ func (s *Service) updateNeighbors() {
 					tracker.RTT = rtt
 				}
 			}
+		} else {
+			slog.Warn("Failed to match neighbor line", "line", line)
 		}
 	}
 }
