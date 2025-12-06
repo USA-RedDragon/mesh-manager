@@ -15,7 +15,6 @@ import (
 	"github.com/phayes/freeport"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"gorm.io/gorm"
@@ -320,7 +319,7 @@ func (m *Manager) addPeer(peer models.Tunnel) {
 
 	err = netlink.RuleAdd(&netlink.Rule{
 		IifName:           iface,
-		Priority:          20010,
+		Priority:          10,
 		Table:             29,
 		Family:            netlink.FAMILY_ALL,
 		SuppressIfgroup:   -1,
@@ -334,7 +333,7 @@ func (m *Manager) addPeer(peer models.Tunnel) {
 	}
 	err = netlink.RuleAdd(&netlink.Rule{
 		IifName:           iface,
-		Priority:          20020,
+		Priority:          20,
 		Table:             20,
 		Family:            netlink.FAMILY_ALL,
 		SuppressIfgroup:   -1,
@@ -349,22 +348,7 @@ func (m *Manager) addPeer(peer models.Tunnel) {
 
 	err = netlink.RuleAdd(&netlink.Rule{
 		IifName:           iface,
-		Priority:          20030,
-		Table:             30,
-		Family:            netlink.FAMILY_ALL,
-		SuppressIfgroup:   -1,
-		SuppressPrefixlen: -1,
-		Goto:              -1,
-		Flow:              -1,
-	})
-	if err != nil {
-		slog.Error("failed to add rule for wireguard device", "iface", iface, "peer", peer.Hostname, "error", err)
-		return
-	}
-
-	err = netlink.RuleAdd(&netlink.Rule{
-		IifName:           iface,
-		Priority:          20040,
+		Priority:          30,
 		Table:             21,
 		Family:            netlink.FAMILY_ALL,
 		SuppressIfgroup:   -1,
@@ -379,22 +363,7 @@ func (m *Manager) addPeer(peer models.Tunnel) {
 
 	err = netlink.RuleAdd(&netlink.Rule{
 		IifName:           iface,
-		Priority:          20050,
-		Table:             22,
-		Family:            netlink.FAMILY_ALL,
-		SuppressIfgroup:   -1,
-		SuppressPrefixlen: -1,
-		Goto:              -1,
-		Flow:              -1,
-	})
-	if err != nil {
-		slog.Error("failed to add rule for wireguard device", "iface", iface, "peer", peer.Hostname, "error", err)
-		return
-	}
-
-	err = netlink.RuleAdd(&netlink.Rule{
-		IifName:           iface,
-		Priority:          20060,
+		Priority:          50,
 		Table:             28,
 		Family:            netlink.FAMILY_ALL,
 		SuppressIfgroup:   -1,
@@ -409,8 +378,8 @@ func (m *Manager) addPeer(peer models.Tunnel) {
 
 	err = netlink.RuleAdd(&netlink.Rule{
 		IifName:           iface,
-		Priority:          20070,
-		Table:             31,
+		Priority:          60,
+		Table:             22,
 		Family:            netlink.FAMILY_ALL,
 		SuppressIfgroup:   -1,
 		SuppressPrefixlen: -1,
@@ -422,11 +391,10 @@ func (m *Manager) addPeer(peer models.Tunnel) {
 		return
 	}
 
-	// ip rule add pref 20099 iif $iface unreachable
 	err = netlink.RuleAdd(&netlink.Rule{
 		IifName:           iface,
-		Priority:          20099,
-		Type:              unix.RTN_UNREACHABLE,
+		Priority:          70,
+		Table:             99,
 		Family:            netlink.FAMILY_ALL,
 		SuppressIfgroup:   -1,
 		SuppressPrefixlen: -1,

@@ -31,33 +31,50 @@ for IPV6_ADDR in $IPV6_ADDRS; do
     ip address add dev br-wan $IPV6_ADDR
 done
 
+echo "20 babel_in" >> /etc/iproute2/rt_tables
+echo "21 babel_super" >> /etc/iproute2/rt_tables
+echo "22 wan_in" >> /etc/iproute2/rt_tables
+echo "27 local_wan" >> /etc/iproute2/rt_tables
+echo "28 wan_out" >> /etc/iproute2/rt_tables
+echo "29 local_lan" >> /etc/iproute2/rt_tables
+echo "99 blackhole" >> /etc/iproute2/rt_tables
+
+# Table 28 (Default Route)
 ip route add default via $GW dev br-wan table 28
 ip -6 route del default via $IP6_GW dev eth0
 ip -6 route add default via $IP6_GW dev br-wan table 28
 
+# Table 27 (Local WAN Subnet)
+WAN_NET=$(ip route show dev br-wan | grep "proto kernel" | awk '{print $1}')
+if [ -n "$WAN_NET" ]; then
+    ip route add $WAN_NET dev br-wan table 27
+fi
+
+# Table 21 (Supernode blackhole)
 SUPERNODE=${SUPERNODE:-}
 if [ -n "$SUPERNODE" ]; then
     ip route add blackhole 10.0.0.0/8 table 21
 fi
+
+# Table 99 (Blackhole)
+ip route add blackhole 0.0.0.0/0 table 99
+
 ip address add dev br-dtdlink $NODE_IP/8
 
-ip rule add pref 20010 iif br-dtdlink lookup 29
-ip rule add pref 20020 iif br-dtdlink lookup 20
-ip rule add pref 20030 iif br-dtdlink lookup 30
-ip rule add pref 20040 iif br-dtdlink lookup 21
-ip rule add pref 20050 iif br-dtdlink lookup 22
-ip rule add pref 20060 iif br-dtdlink lookup 28
-ip rule add pref 20070 iif br-dtdlink lookup 31
-ip rule add pref 20099 iif br-dtdlink unreachable
+ip rule add pref 10 iif br-dtdlink lookup 29
+ip rule add pref 20 iif br-dtdlink lookup 20
+ip rule add pref 30 iif br-dtdlink lookup 21
+# IF MESH TO INTERNET IS ENABLED
+ip rule add pref 50 iif br-dtdlink lookup 28
+ip rule add pref 60 iif br-dtdlink lookup 22
+ip rule add pref 70 iif br-dtdlink lookup 99
 
-ip rule add pref 30210 lookup 29
-ip rule add pref 30220 lookup 20
-ip rule add pref 30230 lookup 30
-ip rule add pref 30240 lookup 21
-ip rule add pref 30260 lookup main
-# ip rule add pref 30270 lookup 22
-ip rule add pref 30280 lookup 28
-ip rule add pref 30290 lookup 31
+ip rule add pref 110 lookup 29
+ip rule add pref 120 lookup 20
+ip rule add pref 130 lookup 21
+ip rule add pref 140 lookup 27
+ip rule add pref 150 lookup 28
+ip rule add pref 160 lookup 22
 
 mkdir -p /etc/meshlink
 echo "${NODE_IP} ${SERVER_NAME}" >> /etc/meshlink/hosts
