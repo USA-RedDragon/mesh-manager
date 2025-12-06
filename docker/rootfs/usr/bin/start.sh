@@ -31,6 +31,7 @@ for IPV6_ADDR in $IPV6_ADDRS; do
     ip address add dev br-wan $IPV6_ADDR
 done
 
+mkdir -p /etc/iproute2/
 echo "20 babel_in" >> /etc/iproute2/rt_tables
 echo "21 babel_super" >> /etc/iproute2/rt_tables
 echo "22 wan_in" >> /etc/iproute2/rt_tables
