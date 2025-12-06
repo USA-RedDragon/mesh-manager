@@ -97,6 +97,7 @@ type Service struct {
 	totalRouteCount int
 	pingSem         *semaphore.Weighted
 	httpSem         *semaphore.Weighted
+	httpClient      *http.Client
 }
 
 func NewService(config *config.Config) *Service {
@@ -105,6 +106,14 @@ func NewService(config *config.Config) *Service {
 		trackers: make(map[string]*Tracker),
 		pingSem:  semaphore.NewWeighted(10), // Limit concurrent pings
 		httpSem:  semaphore.NewWeighted(5),  // Limit concurrent HTTP requests
+		httpClient: &http.Client{
+			Timeout: connectTimeout,
+			Transport: &http.Transport{
+				MaxIdleConns:        10,
+				MaxIdleConnsPerHost: 2,
+				IdleConnTimeout:     30 * time.Second,
+			},
+		},
 	}
 }
 
@@ -339,15 +348,19 @@ func (s *Service) updateRunningAverages() {
 }
 
 func (s *Service) remoteRefresh() {
-	s.mu.RLock()
+	s.mu.Lock()
 	trackersToRefresh := make([]*Tracker, 0)
 	now := time.Now()
 	for _, t := range s.trackers {
 		if t.Refresh.IsZero() || now.After(t.Refresh) {
+			// Mark as refreshing immediately to prevent re-scheduling in the next tick
+			// if the actual refresh takes longer than the tick interval.
+			// We set it to a retry timeout for now; success will overwrite it with the proper interval.
+			t.Refresh = now.Add(refreshRetryTimeout)
 			trackersToRefresh = append(trackersToRefresh, t)
 		}
 	}
-	s.mu.RUnlock()
+	s.mu.Unlock()
 
 	for _, t := range trackersToRefresh {
 		tracker := t
@@ -363,25 +376,17 @@ func (s *Service) remoteRefresh() {
 }
 
 func (s *Service) refreshTracker(t *Tracker) error {
-	s.mu.Lock()
-	jitter := time.Duration(rand.Int63n(int64(refreshTimeoutRange)))
-	t.Refresh = time.Now().Add(refreshTimeoutBase + jitter)
-	s.mu.Unlock()
-
 	if t.IPv6LL == "" {
 		return nil
 	}
 
 	url := fmt.Sprintf("http://[%s%%%s]:8080/cgi-bin/sysinfo.json?lqm=1", t.IPv6LL, t.Device)
 
-	client := &http.Client{
-		Timeout: connectTimeout,
-	}
-
-	resp, err := client.Get(url)
+	resp, err := s.httpClient.Get(url)
 	if err != nil {
+		// Refresh time was already set to retry timeout in remoteRefresh,
+		// but we reset stats here.
 		s.mu.Lock()
-		t.Refresh = time.Now().Add(refreshRetryTimeout)
 		t.RevPingSuccessTime = 0
 		t.RevPingQuality = 0
 		t.RevQuality = 0
@@ -420,6 +425,10 @@ func (s *Service) refreshTracker(t *Tracker) error {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Update refresh time on success
+	jitter := time.Duration(rand.Int63n(int64(refreshTimeoutRange)))
+	t.Refresh = time.Now().Add(refreshTimeoutBase + jitter)
 
 	t.Hostname = canonicalHostname(info.Node)
 
@@ -483,13 +492,14 @@ func (s *Service) updateTrackingState() {
 
 	var wg sync.WaitGroup
 	for _, t := range trackers {
+		// Acquire semaphore BEFORE spawning goroutine to control memory usage
+		if err := s.pingSem.Acquire(s.ctx, 1); err != nil {
+			break
+		}
 		wg.Add(1)
 		go func(tracker *Tracker) {
-			defer wg.Done()
-			if err := s.pingSem.Acquire(s.ctx, 1); err != nil {
-				return
-			}
 			defer s.pingSem.Release(1)
+			defer wg.Done()
 			s.pingTracker(tracker)
 			s.calculateQuality(tracker)
 		}(t)
