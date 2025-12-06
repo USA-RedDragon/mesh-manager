@@ -19,7 +19,7 @@ import (
 
 	"github.com/USA-RedDragon/mesh-manager/internal/config"
 	"github.com/vishvananda/netlink"
-	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -40,39 +40,39 @@ const (
 )
 
 type Tracker struct {
-	LastSeen           time.Time `json:"lastseen"`
-	LastUp             time.Time `json:"lastup"`
-	Type               string    `json:"type"`
-	Device             string    `json:"device"`
-	MAC                string    `json:"mac"`
-	IPv6LL             string    `json:"ipv6ll"`
-	Refresh            time.Time `json:"refresh"`
-	LQ                 int       `json:"lq"`
-	RxCost             int       `json:"rxcost"`
-	TxCost             int       `json:"txcost"`
-	RTT                int       `json:"rtt"`
-	TxPackets          uint64    `json:"tx_packets"`
-	TxFail             uint64    `json:"tx_fail"`
-	LastTxPackets      *uint64   `json:"-"`
-	LastTxFail         *uint64   `json:"-"`
-	AvgTxPackets       float64   `json:"avg_tx_packets"`
-	AvgTxFail          float64   `json:"avg_tx_fail"`
-	TxQuality          float64   `json:"tx_quality"`
-	PingQuality        float64   `json:"ping_quality"`
-	PingSuccessTime    float64   `json:"ping_success_time"`
-	Quality            int       `json:"quality"`
-	Hostname           string    `json:"hostname"`
-	CanonicalIP        string    `json:"canonical_ip"`
-	IP                 string    `json:"ip"`
-	Lat                float64   `json:"lat"`
-	Lon                float64   `json:"lon"`
-	Distance           float64   `json:"distance"`
-	LocalArea          bool      `json:"localarea"`
-	Model              string    `json:"model"`
-	FirmwareVersion    string    `json:"firmware_version"`
-	RevPingSuccessTime float64   `json:"rev_ping_success_time"`
-	RevPingQuality     float64   `json:"rev_ping_quality"`
-	RevQuality         int       `json:"rev_quality"`
+	LastSeen           time.Time    `json:"lastseen"`
+	LastUp             time.Time    `json:"lastup"`
+	Type               string       `json:"type"`
+	Device             string       `json:"device"`
+	MAC                string       `json:"mac"`
+	IPv6LL             string       `json:"ipv6ll"`
+	Refresh            time.Time    `json:"refresh"`
+	LQ                 int          `json:"lq"`
+	RxCost             int          `json:"rxcost"`
+	TxCost             int          `json:"txcost"`
+	RTT                int          `json:"rtt"`
+	TxPackets          uint64       `json:"tx_packets"`
+	TxFail             uint64       `json:"tx_fail"`
+	LastTxPackets      *uint64      `json:"-"`
+	LastTxFail         *uint64      `json:"-"`
+	AvgTxPackets       float64      `json:"avg_tx_packets"`
+	AvgTxFail          float64      `json:"avg_tx_fail"`
+	TxQuality          float64      `json:"tx_quality"`
+	PingQuality        float64      `json:"ping_quality"`
+	PingSuccessTime    float64      `json:"ping_success_time"`
+	Quality            int          `json:"quality"`
+	Hostname           string       `json:"hostname"`
+	CanonicalIP        string       `json:"canonical_ip"`
+	IP                 string       `json:"ip"`
+	Lat                float64      `json:"lat"`
+	Lon                float64      `json:"lon"`
+	Distance           float64      `json:"distance"`
+	LocalArea          bool         `json:"localarea"`
+	Model              string       `json:"model"`
+	FirmwareVersion    string       `json:"firmware_version"`
+	RevPingSuccessTime float64      `json:"rev_ping_success_time"`
+	RevPingQuality     float64      `json:"rev_ping_quality"`
+	RevQuality         int          `json:"rev_quality"`
 	BabelRouteCount    int          `json:"babel_route_count"`
 	BabelMetric        int          `json:"babel_metric"`
 	Routable           bool         `json:"routable"`
@@ -95,12 +95,16 @@ type Service struct {
 	wg              sync.WaitGroup
 	lastTick        time.Time
 	totalRouteCount int
+	pingSem         *semaphore.Weighted
+	httpSem         *semaphore.Weighted
 }
 
 func NewService(config *config.Config) *Service {
 	return &Service{
 		config:   config,
 		trackers: make(map[string]*Tracker),
+		pingSem:  semaphore.NewWeighted(10), // Limit concurrent pings
+		httpSem:  semaphore.NewWeighted(5),  // Limit concurrent HTTP requests
 	}
 }
 
@@ -335,8 +339,6 @@ func (s *Service) updateRunningAverages() {
 }
 
 func (s *Service) remoteRefresh() {
-	var g errgroup.Group
-
 	s.mu.RLock()
 	trackersToRefresh := make([]*Tracker, 0)
 	now := time.Now()
@@ -349,9 +351,14 @@ func (s *Service) remoteRefresh() {
 
 	for _, t := range trackersToRefresh {
 		tracker := t
-		g.Go(func() error {
-			return s.refreshTracker(tracker)
-		})
+		// We don't wait for these to finish, but we limit concurrency
+		go func() {
+			if err := s.httpSem.Acquire(s.ctx, 1); err != nil {
+				return
+			}
+			defer s.httpSem.Release(1)
+			s.refreshTracker(tracker)
+		}()
 	}
 }
 
@@ -479,6 +486,10 @@ func (s *Service) updateTrackingState() {
 		wg.Add(1)
 		go func(tracker *Tracker) {
 			defer wg.Done()
+			if err := s.pingSem.Acquire(s.ctx, 1); err != nil {
+				return
+			}
+			defer s.pingSem.Release(1)
 			s.pingTracker(tracker)
 			s.calculateQuality(tracker)
 		}(t)
@@ -492,7 +503,8 @@ func (s *Service) pingTracker(t *Tracker) {
 	}
 
 	timeoutSec := strconv.Itoa(int(pingTimeout.Seconds()))
-	cmd := exec.Command("ping6", "-c", "1", "-W", timeoutSec, "-I", t.Device, t.IPv6LL)
+	// Use CommandContext to respect cancellation
+	cmd := exec.CommandContext(s.ctx, "ping6", "-c", "1", "-W", timeoutSec, "-I", t.Device, t.IPv6LL)
 	output, err := cmd.Output()
 
 	s.mu.Lock()
