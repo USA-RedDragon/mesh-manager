@@ -122,6 +122,8 @@ iptables -A FORWARD -i wgc+ -j ZONE_VPN_FWD
 # WAN Zone
 # Allow Ping
 iptables -A ZONE_WAN_IN -p icmp --icmp-type echo-request -j ACCEPT
+iptables -A ZONE_WAN_IN -p udp --sport 53 -j ACCEPT
+iptables -A ZONE_WAN_IN -p tcp --sport 53 -j ACCEPT
 iptables -A ZONE_WAN_IN -p tcp -m multiport --dports 80,8080 -j ACCEPT
 # We need to allow WIREGUARD_STARTING_PORT to WIREGUARD_STARTING_PORT+100 (udo)
 iptables -A ZONE_WAN_IN -p udp -m multiport --dports ${WIREGUARD_STARTING_PORT}:$((${WIREGUARD_STARTING_PORT}+100)) -j ACCEPT
@@ -143,6 +145,8 @@ if [ -n "$SUPERNODE" ]; then
     iptables -A ZONE_DTD_IN -p udp --dport 53 -j ACCEPT
     iptables -A ZONE_DTD_IN -p tcp --dport 53 -j ACCEPT
 fi
+iptables -A ZONE_DTD_IN -p tcp --dport 5201 -j ACCEPT
+iptables -A ZONE_DTD_IN -p udp --dport 5201 -j ACCEPT
 # Drop everything else
 iptables -A ZONE_DTD_IN -j REJECT --reject-with icmp-host-prohibited
 
@@ -154,6 +158,8 @@ if [ -n "$SUPERNODE" ]; then
     iptables -A ZONE_VPN_IN -p udp --dport 53 -j ACCEPT
     iptables -A ZONE_VPN_IN -p tcp --dport 53 -j ACCEPT
 fi
+iptables -A ZONE_VPN_IN -p tcp --dport 5201 -j ACCEPT
+iptables -A ZONE_VPN_IN -p udp --dport 5201 -j ACCEPT
 iptables -A ZONE_VPN_IN -j REJECT --reject-with icmp-host-prohibited
 
 iptables -t nat -A POSTROUTING -o wgs+ -j SNAT --to-source $NODE_IP
