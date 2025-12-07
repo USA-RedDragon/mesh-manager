@@ -99,6 +99,8 @@ type Service struct {
 	pingSem         *semaphore.Weighted
 	httpSem         *semaphore.Weighted
 	httpClient      *http.Client
+	startStopMu     sync.Mutex
+	stopping        bool
 }
 
 func NewService(config *config.Config) *Service {
@@ -119,21 +121,37 @@ func NewService(config *config.Config) *Service {
 }
 
 func (s *Service) Start() error {
+	s.startStopMu.Lock()
+	if s.stopping {
+		s.startStopMu.Unlock()
+		// Block forever to prevent busy loop in registry during shutdown
+		select {}
+	}
+
 	if !s.IsEnabled() {
+		s.startStopMu.Unlock()
 		return nil
 	}
 
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	s.wg.Add(1)
+	s.startStopMu.Unlock()
+
+	// Run synchronously so that the service registry doesn't spin in a tight loop restarting us.
+	// The registry expects Start() to block until the service exits.
 	s.run()
 
 	return nil
 }
 
 func (s *Service) Stop() error {
+	s.startStopMu.Lock()
+	s.stopping = true
 	if s.cancel != nil {
 		s.cancel()
 	}
+	s.startStopMu.Unlock()
+
 	s.wg.Wait()
 	return nil
 }
