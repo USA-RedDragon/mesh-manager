@@ -16,7 +16,7 @@ func (s *Service) AddTunnel(iface string) error {
 	}
 	defer conn.Close()
 
-	tun := []byte(GenerateTunnelLine(iface))
+	tun := []byte(GenerateTunnelLine(iface, s.config.Supernode))
 	n, err := conn.Write(tun)
 	if err != nil {
 		return fmt.Errorf("failed to write to socket: %w", err)

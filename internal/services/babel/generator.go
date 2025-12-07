@@ -28,6 +28,7 @@ func Generate(config *config.Config, db *gorm.DB) string {
 	ret += "router-id " + config.Babel.RouterID + "\n"
 	ret += "interface br-dtdlink type wired\n"
 	ret += "interface br-dtdlink rxcost 96\n"
+	ret += "interface br-dtdlink enable-timestamps false\n"
 	ret += "interface br-dtdlink split-horizon true\n"
 
 	tunnelInterfaces := make([]string, 0)
@@ -46,10 +47,12 @@ func Generate(config *config.Config, db *gorm.DB) string {
 	}
 
 	for _, iface := range tunnelInterfaces {
-		ret += GenerateTunnelLine(iface)
+		ret += GenerateTunnelLine(iface, config.Supernode)
 	}
 
 	if config.Supernode {
+		ret += "smoothing-half-life 0\n"
+		ret += "protocol-buffer-size 32768\n"
 		ret += "import-table 21\n"
 		ret += "redistribute anyproto ip 10.0.0.0/8 allow\n"
 		ret += "out if br-dtdlink ip 10.0.0.0/8 eq 8 allow\n"
@@ -59,6 +62,8 @@ func Generate(config *config.Config, db *gorm.DB) string {
 
 		ret += "redistribute anyproto ip 172.30.0.0/16 eq 32 deny\n"
 	} else {
+		ret += "smoothing-half-life 10\n"
+		ret += "protocol-buffer-size 65536\n"
 		ret += "redistribute anyproto ip 10.0.0.0/8 ge 24 allow\n"
 		ret += "redistribute anyproto ip 44.0.0.0/8 ge 24 allow\n"
 		ret += "redistribute anyproto ip 172.31.0.0/16 eq 32 deny\n"
@@ -81,10 +86,16 @@ func Generate(config *config.Config, db *gorm.DB) string {
 	return ret
 }
 
-func GenerateTunnelLine(iface string) string {
+func GenerateTunnelLine(iface string, supernode bool) string {
 	ret := fmt.Sprintf("interface %s type tunnel\n", iface)
 	ret += fmt.Sprintf("interface %s rxcost 206\n", iface)
 	ret += fmt.Sprintf("interface %s hello-interval 10\n", iface)
+	ret += fmt.Sprintf("interface %s split-horizon true\n", iface)
+	updateInterval := 120
+	if supernode {
+		updateInterval = 300
+	}
+	ret += fmt.Sprintf("interface %s update-interval %d\n", iface, updateInterval)
 	ret += fmt.Sprintf("interface %s rtt-min 10\n", iface)
 	ret += fmt.Sprintf("interface %s rtt-max 400\n", iface)
 	ret += fmt.Sprintf("interface %s max-rtt-penalty 400\n", iface)
