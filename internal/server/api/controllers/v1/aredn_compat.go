@@ -309,6 +309,12 @@ func GETSysinfo(c *gin.Context) {
 	}
 	doLinkInfo := linkInfoStr == "1"
 
+	lqmStr, exists := c.GetQuery("lqm")
+	if !exists {
+		lqmStr = "0"
+	}
+	doLQM := lqmStr == "1"
+
 	sysinfo := apimodels.SysinfoResponse{
 		Longitude: di.Config.Longitude,
 		Latitude:  di.Config.Latitude,
@@ -341,7 +347,7 @@ func GETSysinfo(c *gin.Context) {
 			LegacyTunnelCount: legacyTunnels,
 		},
 		LQM: apimodels.LQM{
-			Enabled: false,
+			Enabled: di.Config.LQM.Enabled,
 		},
 		Interfaces: getInterfaces(),
 	}
@@ -356,6 +362,13 @@ func GETSysinfo(c *gin.Context) {
 
 	if doLinkInfo {
 		sysinfo.LinkInfo = getLinkInfo(c.Request.Context())
+	}
+
+	if doLQM && di.Config.LQM.Enabled {
+		lqmInfo := getLQMInfo()
+		if lqmInfo != nil {
+			sysinfo.LQM.Info = lqmInfo
+		}
 	}
 
 	c.JSON(http.StatusOK, sysinfo)
@@ -568,4 +581,46 @@ func getServices(parser *olsr.ServicesParser) []apimodels.Service {
 	}
 
 	return ret
+}
+
+func getLQMInfo() *apimodels.LQMInfo {
+	// Read /tmp/lqm.info
+	file, err := os.Open("/tmp/lqm.info")
+	if err != nil {
+		return nil
+	}
+	defer file.Close()
+
+	var lqmData struct {
+		Trackers map[string]map[string]interface{} `json:"trackers"`
+	}
+
+	if err := json.NewDecoder(file).Decode(&lqmData); err != nil {
+		return nil
+	}
+
+	// Convert to apimodels format
+	trackers := make(map[string]apimodels.LQMTracker)
+	for mac, data := range lqmData.Trackers {
+		tracker := apimodels.LQMTracker{}
+		
+		if hostname, ok := data["hostname"].(string); ok {
+			tracker.Hostname = hostname
+		}
+		if pingSuccessTime, ok := data["ping_success_time"].(float64); ok {
+			tracker.PingSuccessTime = pingSuccessTime
+		}
+		if pingQuality, ok := data["ping_quality"].(float64); ok {
+			tracker.PingQuality = pingQuality
+		}
+		if quality, ok := data["quality"].(float64); ok {
+			tracker.Quality = int(quality)
+		}
+		
+		trackers[mac] = tracker
+	}
+
+	return &apimodels.LQMInfo{
+		Trackers: trackers,
+	}
 }

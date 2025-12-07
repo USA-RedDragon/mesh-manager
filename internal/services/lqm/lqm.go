@@ -41,23 +41,27 @@ const (
 )
 
 type Tracker struct {
-	LastSeen           time.Time    `json:"lastseen"`
-	LastUp             time.Time    `json:"lastup"`
+	FirstSeen          time.Time    `json:"-"`
+	LastSeen           time.Time    `json:"-"`
+	LastUp             time.Time    `json:"-"`
 	Type               string       `json:"type"`
 	Device             string       `json:"device"`
 	MAC                string       `json:"mac"`
 	IPv6LL             string       `json:"ipv6ll"`
-	Refresh            time.Time    `json:"refresh"`
-	LQ                 int          `json:"lq"`
-	RxCost             int          `json:"rxcost"`
-	TxCost             int          `json:"txcost"`
+	Refresh            time.Time    `json:"-"`
+	LQ                 int          `json:"-"`
+	RxCost             int          `json:"-"`
+	TxCost             int          `json:"-"`
 	RTT                int          `json:"rtt"`
-	TxPackets          uint64       `json:"tx_packets"`
+	TxPackets          uint64       `json:"tx"`
 	TxFail             uint64       `json:"tx_fail"`
+	TxRetries          uint64       `json:"tx_retries"`
 	LastTxPackets      *uint64      `json:"-"`
 	LastTxFail         *uint64      `json:"-"`
-	AvgTxPackets       float64      `json:"avg_tx_packets"`
+	LastTxRetries      *uint64      `json:"-"`
+	AvgTx              float64      `json:"avg_tx"`
 	AvgTxFail          float64      `json:"avg_tx_fail"`
+	AvgTxRetries       float64      `json:"avg_tx_retries"`
 	TxQuality          float64      `json:"tx_quality"`
 	PingQuality        float64      `json:"ping_quality"`
 	PingSuccessTime    float64      `json:"ping_success_time"`
@@ -71,9 +75,11 @@ type Tracker struct {
 	LocalArea          bool         `json:"localarea"`
 	Model              string       `json:"model"`
 	FirmwareVersion    string       `json:"firmware_version"`
+	RevLastSeen        time.Time    `json:"-"`
 	RevPingSuccessTime float64      `json:"rev_ping_success_time"`
 	RevPingQuality     float64      `json:"rev_ping_quality"`
 	RevQuality         int          `json:"rev_quality"`
+	NodeRouteCount     int          `json:"node_route_count"`
 	BabelRouteCount    int          `json:"babel_route_count"`
 	BabelMetric        int          `json:"babel_metric"`
 	Routable           bool         `json:"routable"`
@@ -87,20 +93,56 @@ type BabelConfig struct {
 	RxCost         int `json:"rxcost"`
 }
 
+type SysinfoResponse struct {
+	Node        string             `json:"node"`
+	Lat         string             `json:"lat"`
+	Lon         string             `json:"lon"`
+	NodeDetails SysinfoNodeDetails `json:"node_details"`
+	Interfaces  []SysinfoInterface `json:"interfaces"`
+	Lqm         SysinfoLqm         `json:"lqm"`
+}
+
+type SysinfoNodeDetails struct {
+	Model           string `json:"model"`
+	FirmwareVersion string `json:"firmware_version"`
+}
+
+type SysinfoInterface struct {
+	Mac string `json:"mac"`
+	Ip  string `json:"ip"`
+}
+
+type SysinfoLqm struct {
+	Info SysinfoLqmInfo `json:"info"`
+}
+
+type SysinfoLqmInfo struct {
+	Trackers map[string]SysinfoTracker `json:"trackers"`
+}
+
+type SysinfoTracker struct {
+	Hostname        string  `json:"hostname"`
+	PingSuccessTime float64 `json:"ping_success_time"`
+	PingQuality     float64 `json:"ping_quality"`
+	Quality         int     `json:"quality"`
+}
+
 type Service struct {
-	config          *config.Config
-	trackers        map[string]*Tracker
-	mu              sync.RWMutex
-	ctx             context.Context
-	cancel          context.CancelFunc
-	wg              sync.WaitGroup
-	lastTick        time.Time
-	totalRouteCount int
-	pingSem         *semaphore.Weighted
-	httpSem         *semaphore.Weighted
-	httpClient      *http.Client
-	startStopMu     sync.Mutex
-	stopping        bool
+	config              *config.Config
+	trackers            map[string]*Tracker
+	mu                  sync.RWMutex
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	wg                  sync.WaitGroup
+	lastTick            time.Time
+	startTime           time.Time
+	totalRouteCount     int
+	totalNodeRouteCount int
+	pingSem             *semaphore.Weighted
+	httpSem             *semaphore.Weighted
+	httpClient          *http.Client
+	startStopMu         sync.Mutex
+	stopping            bool
 }
 
 func NewService(config *config.Config) *Service {
@@ -134,6 +176,7 @@ func (s *Service) Start() error {
 	}
 
 	s.ctx, s.cancel = context.WithCancel(context.Background())
+	s.startTime = time.Now()
 	s.wg.Add(1)
 	s.startStopMu.Unlock()
 
@@ -205,26 +248,36 @@ func (s *Service) pruneTrackers(now time.Time) {
 	defer s.mu.Unlock()
 	for mac, t := range s.trackers {
 		if now.Sub(t.LastSeen) > lastSeenTimeout {
+			slog.Info("LQM: Pruning tracker", "mac", mac, "last_seen", t.LastSeen, "age", now.Sub(t.LastSeen))
 			delete(s.trackers, mac)
 		}
 	}
 }
 
 func (s *Service) updateNeighbors() {
+	slog.Info("LQM: updateNeighbors started")
 	conn, err := net.Dial("unix", babelSocketPath)
 	if err != nil {
-		slog.Error("Failed to connect to babel socket", "error", err)
+		slog.Warn("LQM: Failed to connect to babel socket", "error", err)
 		return
 	}
 	defer conn.Close()
 
+	scanner := bufio.NewScanner(conn)
+
+	// Consume banner
+	for scanner.Scan() {
+		if scanner.Text() == "ok" {
+			break
+		}
+	}
+
 	_, err = conn.Write([]byte("dump-neighbors\n"))
 	if err != nil {
-		slog.Error("Failed to write to babel socket", "error", err)
+		slog.Error("LQM: Failed to write to babel socket", "error", err)
 		return
 	}
 
-	scanner := bufio.NewScanner(conn)
 	neighborRegex := regexp.MustCompile(`^add.*address ([^ \t]+) if ([^ \t]+) reach ([^ \t]+) .* rxcost ([^ \t]+) txcost ([^ \t]+)`)
 	rttRegex := regexp.MustCompile(`rtt ([^ \t]+)`)
 
@@ -252,21 +305,32 @@ func (s *Service) updateNeighbors() {
 
 			devType := deviceToType(iface)
 			if devType == "" {
-				slog.Warn("Skipping neighbor on unsupported interface", "iface", iface, "mac", mac)
+				slog.Warn("LQM: Skipping neighbor on unsupported interface", "iface", iface, "mac", mac)
 				continue
 			}
 
 			if !exists {
-				slog.Info("New neighbor detected", "mac", mac, "iface", iface, "type", devType)
+				slog.Info("LQM: New neighbor detected", "mac", mac, "iface", iface, "type", devType)
 				tracker = &Tracker{
-					LastSeen: now,
-					LastUp:   now,
-					Type:     devType,
-					Device:   iface,
-					MAC:      mac,
-					IPv6LL:   ipv6ll,
+					FirstSeen: now,
+					LastSeen:  now,
+					LastUp:    now,
+					Type:      devType,
+					Device:    iface,
+					MAC:       mac,
+					IPv6LL:    ipv6ll,
+				}
+				// Derive Wireguard peer IP immediately
+				if devType == "Wireguard" {
+					tracker.IP = deriveWireguardPeerIP(iface)
 				}
 				s.trackers[mac] = tracker
+			} else {
+				// Always re-derive Wireguard peer IPs to ensure they're current
+				if tracker.Type == "Wireguard" {
+					tracker.IP = deriveWireguardPeerIP(iface)
+					slog.Debug("LQM: Updated IP for existing Wireguard tracker", "mac", mac, "device", iface, "ip", tracker.IP)
+				}
 			}
 
 			tracker.LastSeen = now
@@ -299,9 +363,10 @@ func (s *Service) updateNeighbors() {
 				}
 			}
 		} else {
-			slog.Warn("Failed to match neighbor line", "line", line)
+			slog.Info("LQM: Failed to match neighbor line", "line", line)
 		}
 	}
+	slog.Info("LQM: updateNeighbors finished")
 }
 
 func (s *Service) updateStats() {
@@ -338,7 +403,7 @@ func (s *Service) updateRunningAverages() {
 	for _, tracker := range s.trackers {
 		// Tx Packets
 		if tracker.LastTxPackets == nil {
-			tracker.AvgTxPackets = 0
+			tracker.AvgTx = 0
 			val := tracker.TxPackets
 			tracker.LastTxPackets = &val
 		} else {
@@ -346,7 +411,7 @@ func (s *Service) updateRunningAverages() {
 			if tracker.TxPackets > *tracker.LastTxPackets {
 				diff = float64(tracker.TxPackets - *tracker.LastTxPackets)
 			}
-			tracker.AvgTxPackets = tracker.AvgTxPackets*txQualityRunAvg + diff*(1-txQualityRunAvg)
+			tracker.AvgTx = tracker.AvgTx*txQualityRunAvg + diff*(1-txQualityRunAvg)
 			*tracker.LastTxPackets = tracker.TxPackets
 		}
 
@@ -364,9 +429,23 @@ func (s *Service) updateRunningAverages() {
 			*tracker.LastTxFail = tracker.TxFail
 		}
 
-		if tracker.AvgTxPackets > 0 {
-			bad := tracker.AvgTxFail
-			tracker.TxQuality = 100 * (1 - math.Min(1, bad/tracker.AvgTxPackets))
+		// Tx Retries
+		if tracker.LastTxRetries == nil {
+			tracker.AvgTxRetries = 0
+			val := tracker.TxRetries
+			tracker.LastTxRetries = &val
+		} else {
+			diff := float64(0)
+			if tracker.TxRetries > *tracker.LastTxRetries {
+				diff = float64(tracker.TxRetries - *tracker.LastTxRetries)
+			}
+			tracker.AvgTxRetries = tracker.AvgTxRetries*txQualityRunAvg + diff*(1-txQualityRunAvg)
+			*tracker.LastTxRetries = tracker.TxRetries
+		}
+
+		if tracker.AvgTx > 0 {
+			bad := math.Max(tracker.AvgTxFail, tracker.AvgTxRetries)
+			tracker.TxQuality = 100 * (1 - math.Min(1, bad/tracker.AvgTx))
 		}
 	}
 }
@@ -419,29 +498,7 @@ func (s *Service) refreshTracker(t *Tracker) error {
 	}
 	defer resp.Body.Close()
 
-	var info struct {
-		Node string `json:"node"`
-		Lat  string `json:"lat"`
-		Lon  string `json:"lon"`
-		NodeDetails struct {
-			Model           string `json:"model"`
-			FirmwareVersion string `json:"firmware_version"`
-		} `json:"node_details"`
-		Interfaces []struct {
-			Mac string `json:"mac"`
-			Ip  string `json:"ip"`
-		} `json:"interfaces"`
-		Lqm struct {
-			Info struct {
-				Trackers map[string]struct {
-					Hostname        string  `json:"hostname"`
-					PingSuccessTime float64 `json:"ping_success_time"`
-					PingQuality     float64 `json:"ping_quality"`
-					Quality         int     `json:"quality"`
-				} `json:"trackers"`
-			} `json:"info"`
-		} `json:"lqm"`
-	}
+	var info SysinfoResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
 		return err
@@ -453,11 +510,15 @@ func (s *Service) refreshTracker(t *Tracker) error {
 	// Update refresh time on success
 	jitter := time.Duration(rand.Int63n(int64(refreshTimeoutRange)))
 	t.Refresh = time.Now().Add(refreshTimeoutBase + jitter)
+	t.RevLastSeen = time.Now()
 
 	t.Hostname = canonicalHostname(info.Node)
 
 	if t.Type == "Wireguard" {
-		// Skip complex WG IP logic for now
+		// Ensure IP is set for Wireguard
+		if t.IP == "" {
+			t.IP = deriveWireguardPeerIP(t.Device)
+		}
 	} else {
 		for _, iface := range info.Interfaces {
 			if strings.EqualFold(iface.Mac, t.MAC) {
@@ -507,6 +568,7 @@ func (s *Service) refreshTracker(t *Tracker) error {
 }
 
 func (s *Service) updateTrackingState() {
+	slog.Info("LQM: updateTrackingState started")
 	s.mu.Lock()
 	trackers := make([]*Tracker, 0, len(s.trackers))
 	for _, t := range s.trackers {
@@ -529,6 +591,7 @@ func (s *Service) updateTrackingState() {
 		}(t)
 	}
 	wg.Wait()
+	slog.Info("LQM: updateTrackingState finished")
 }
 
 func (s *Service) pingTracker(t *Tracker) {
@@ -605,18 +668,73 @@ func (s *Service) writeState() {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	state := struct {
-		Now             int64               `json:"now"`
-		Trackers        map[string]*Tracker `json:"trackers"`
-		Distance        int                 `json:"distance"`
-		HiddenNodes     []string            `json:"hidden_nodes"`
-		TotalRouteCount int                 `json:"total_route_count"`
-	}{
-		Now:             time.Now().Unix(),
-		Trackers:        s.trackers,
-		Distance:        defaultMaxDistance,
-		HiddenNodes:     []string{},
-		TotalRouteCount: s.totalRouteCount,
+	slog.Info("LQM: Writing state", "trackers_count", len(s.trackers))
+
+	now := time.Now()
+	nowSecs := int(now.Sub(s.startTime).Seconds())
+
+	// Convert trackers to JSON-friendly format with relative timestamps
+	jsonTrackers := make(map[string]map[string]interface{})
+	for mac, t := range s.trackers {
+		tracker := map[string]interface{}{
+			"firstseen":             int(t.FirstSeen.Sub(s.startTime).Seconds()),
+			"lastseen":              int(t.LastSeen.Sub(s.startTime).Seconds()),
+			"type":                  t.Type,
+			"device":                t.Device,
+			"mac":                   t.MAC,
+			"ipv6ll":                t.IPv6LL,
+			"refresh":               int(t.Refresh.Sub(s.startTime).Seconds()),
+			"rtt":                   t.RTT,
+			"tx":                    t.TxPackets,
+			"tx_fail":               t.TxFail,
+			"tx_retries":            t.TxRetries,
+			"avg_tx":                t.AvgTx,
+			"avg_tx_fail":           t.AvgTxFail,
+			"avg_tx_retries":        t.AvgTxRetries,
+			"tx_quality":            t.TxQuality,
+			"ping_quality":          t.PingQuality,
+			"ping_success_time":     t.PingSuccessTime,
+			"quality":               t.Quality,
+			"hostname":              t.Hostname,
+			"canonical_ip":          t.CanonicalIP,
+			"ip":                    t.IP,
+			"lat":                   t.Lat,
+			"lon":                   t.Lon,
+			"distance":              t.Distance,
+			"localarea":             t.LocalArea,
+			"model":                 t.Model,
+			"firmware_version":      t.FirmwareVersion,
+			"rev_ping_success_time": t.RevPingSuccessTime,
+			"rev_ping_quality":      t.RevPingQuality,
+			"rev_quality":           t.RevQuality,
+			"node_route_count":      t.NodeRouteCount,
+			"babel_route_count":     t.BabelRouteCount,
+			"babel_metric":          t.BabelMetric,
+			"routable":              t.Routable,
+			"user_blocks":           t.UserBlocks,
+		}
+		// Only include rev_lastseen if it's been set (not zero time)
+		if !t.RevLastSeen.IsZero() {
+			tracker["rev_lastseen"] = int(t.RevLastSeen.Sub(s.startTime).Seconds())
+		}
+		if t.BabelConfig != nil {
+			tracker["babel_config"] = map[string]interface{}{
+				"hello_interval":  t.BabelConfig.HelloInterval / 1000,
+				"update_interval": t.BabelConfig.UpdateInterval / 1000,
+				"rxcost":          t.BabelConfig.RxCost,
+			}
+		}
+		jsonTrackers[mac] = tracker
+	}
+
+	state := map[string]interface{}{
+		"now":                     nowSecs,
+		"trackers":                jsonTrackers,
+		"distance":                defaultMaxDistance,
+		"hidden_nodes":            []string{},
+		"total_node_route_count":  s.totalNodeRouteCount,
+		"coverage":                0,
+		"babel":                   true,
 	}
 
 	file, err := os.Create(lqmInfoPath)
@@ -694,13 +812,27 @@ func calcDistance(lat1, lon1, lat2, lon2 float64) float64 {
 }
 
 func (s *Service) updateRoutes() {
+	slog.Info("LQM: updateRoutes started")
 	conn, err := net.Dial("unix", babelSocketPath)
 	if err != nil {
+		slog.Error("LQM: Failed to connect to babel socket for routes", "error", err)
 		return
 	}
 	defer conn.Close()
 
-	_, err = conn.Write([]byte("dump-routes\n"))
+	// Set deadline to prevent hanging
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	scanner := bufio.NewScanner(conn)
+
+	// Consume banner
+	for scanner.Scan() {
+		if scanner.Text() == "ok" {
+			break
+		}
+	}
+
+	_, err = conn.Write([]byte("dump-installed-routes\n"))
 	if err != nil {
 		return
 	}
@@ -709,20 +841,26 @@ func (s *Service) updateRoutes() {
 	// Reset counts and build lookup map
 	ipToTracker := make(map[string]*Tracker)
 	for _, t := range s.trackers {
+		t.NodeRouteCount = 0
 		t.BabelRouteCount = 0
 		t.BabelMetric = math.MaxInt32
 		t.Routable = false
+		// Map by both IPv6LL and IPv4 if available
 		if t.IPv6LL != "" {
 			ipToTracker[t.IPv6LL] = t
+		}
+		if t.IP != "" {
+			ipToTracker[t.IP] = t
 		}
 	}
 	s.mu.Unlock()
 
-	scanner := bufio.NewScanner(conn)
-	// Example: add route prefix ... metric 128 ... via fe80::... if ...
-	routeRegex := regexp.MustCompile(`^add route .* metric ([0-9]+) .* via ([^ \t]+)`)
+	// Example: add route prefix 10.51.120.3/32 ... installed yes ... nexthop fe80::... metric 257 ...
+	// Match AREDN: only count installed IPv4 routes with metric != 65535
+	routeRegex := regexp.MustCompile(`^add route .+ prefix ([^ /]+)/([0-9]+) .* installed yes .* metric ([0-9]+) .* nexthop ([^ \t]+)`)
 
 	totalRoutes := 0
+	totalNodeRoutes := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "ok" {
@@ -731,28 +869,92 @@ func (s *Service) updateRoutes() {
 
 		matches := routeRegex.FindStringSubmatch(line)
 		if matches != nil {
-			totalRoutes++
-			metric, _ := strconv.Atoi(matches[1])
-			via := matches[2]
+			prefix := matches[1]
+			prefixLen := matches[2]
+			metric, _ := strconv.Atoi(matches[3])
+			via := matches[4]
+
+			// Skip non-IPv4 routes and invalid metrics (matching AREDN behavior)
+			if !strings.Contains(prefix, ".") || metric == 65535 {
+				continue
+			}
+
+			// Node routes are /32 (host routes)
+			isNodeRoute := prefixLen == "32"
 
 			s.mu.Lock()
 			if t, ok := ipToTracker[via]; ok {
 				t.Routable = true
 				t.BabelRouteCount++
+				if isNodeRoute {
+					t.NodeRouteCount++
+					totalNodeRoutes++
+				}
 				if metric < t.BabelMetric {
 					t.BabelMetric = metric
 				}
 			}
 			s.mu.Unlock()
+			totalRoutes++
 		}
 	}
+	slog.Info("LQM: updateRoutes finished")
 
 	s.mu.Lock()
 	s.totalRouteCount = totalRoutes
+	s.totalNodeRouteCount = totalNodeRoutes
 	for _, t := range s.trackers {
 		if t.BabelMetric == math.MaxInt32 {
 			t.BabelMetric = 0
 		}
 	}
 	s.mu.Unlock()
+}
+
+// deriveWireguardPeerIP derives the peer's IPv4 address from a Wireguard interface
+// For wgs* (server): peer IP = interface IP + 1
+// For wgc* (client): peer IP = interface IP - 1
+func deriveWireguardPeerIP(device string) string {
+	if device == "" {
+		return ""
+	}
+
+	links, err := netlink.LinkList()
+	if err != nil {
+		return ""
+	}
+
+	for _, link := range links {
+		if link.Attrs().Name == device {
+			addrs, err := netlink.AddrList(link, netlink.FAMILY_V4)
+			if err != nil {
+				return ""
+			}
+			if len(addrs) == 0 {
+				return ""
+			}
+			
+			// Get the IPv4 address and ensure it's in 4-byte format
+			ip := addrs[0].IP.To4()
+			if ip == nil {
+				return ""
+			}
+			
+			// Make a copy of the IP to avoid modifying the original
+			peerIP := make(net.IP, len(ip))
+			copy(peerIP, ip)
+			
+			if strings.HasPrefix(device, "wgs") {
+				// Server interface: peer is IP + 1
+				peerIP[3]++
+				return peerIP.String()
+			} else if strings.HasPrefix(device, "wgc") {
+				// Client interface: peer is IP - 1
+				peerIP[3]--
+				return peerIP.String()
+			}
+			break
+		}
+	}
+	return ""
 }

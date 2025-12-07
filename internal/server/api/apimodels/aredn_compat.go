@@ -26,7 +26,19 @@ type Tunnels struct {
 }
 
 type LQM struct {
-	Enabled bool `json:"enabled"`
+	Enabled bool    `json:"enabled"`
+	Info    *LQMInfo `json:"info,omitempty"`
+}
+
+type LQMInfo struct {
+	Trackers map[string]LQMTracker `json:"trackers"`
+}
+
+type LQMTracker struct {
+	Hostname        string  `json:"hostname"`
+	PingSuccessTime float64 `json:"ping_success_time"`
+	PingQuality     float64 `json:"ping_quality"`
+	Quality         int     `json:"quality"`
 }
 
 type Interface struct {
