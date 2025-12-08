@@ -69,7 +69,7 @@
     "mochawesome-merge": "5.1.0",
     "mochawesome-report-generator": "6.3.2",
     "prettier": "3.7.4",
-    "sass": "1.94.2",
+    "sass": "1.94.3",
     "start-server-and-test": "2.1.3",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.49.0",
