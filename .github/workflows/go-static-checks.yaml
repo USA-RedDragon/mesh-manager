@@ -30,7 +30,7 @@ jobs:
           npm run build
           cd -
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: frontend
           path: frontend/dist
@@ -57,7 +57,7 @@ jobs:
           npm run build
           cd -
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: new-frontend
           path: new-frontend/dist
