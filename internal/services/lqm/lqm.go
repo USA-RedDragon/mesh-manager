@@ -870,6 +870,8 @@ func (s *Service) updateRoutes(ctx context.Context) {
 		}
 		if t.IP != "" {
 			ipToTracker[t.IP] = t
+		} else if t.CanonicalIP != "" {
+			ipToTracker[t.CanonicalIP] = t
 		}
 	}
 	s.mu.Unlock()
