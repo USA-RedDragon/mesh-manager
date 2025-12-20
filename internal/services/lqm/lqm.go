@@ -45,8 +45,8 @@ const (
 
 type SysinfoResponse struct {
 	Node        string             `json:"node"`
-	Lat         string             `json:"lat"`
-	Lon         string             `json:"lon"`
+	Lat         float64            `json:"lat"`
+	Lon         float64            `json:"lon"`
 	NodeDetails SysinfoNodeDetails `json:"node_details"`
 	Interfaces  []SysinfoInterface `json:"interfaces"`
 	Lqm         LQM                `json:"lqm"`
@@ -549,6 +549,9 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 	t.Refresh = int(time.Now().Add(refreshTimeoutBase + jitter).Unix())
 	t.RevLastSeen = int(time.Now().Unix())
 
+	t.Lat = info.Lat
+	t.Lon = info.Lon
+
 	t.Hostname = canonicalHostname(info.Node)
 
 	if t.Type == DeviceTypeWireguard {
@@ -563,13 +566,6 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 				break
 			}
 		}
-	}
-
-	if lat, err := strconv.ParseFloat(info.Lat, 64); err == nil {
-		t.Lat = lat
-	}
-	if lon, err := strconv.ParseFloat(info.Lon, 64); err == nil {
-		t.Lon = lon
 	}
 
 	if s.config.Latitude != "" && s.config.Longitude != "" {
