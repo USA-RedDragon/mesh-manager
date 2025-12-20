@@ -39,4 +39,4 @@ COPY --chown=root:root docker/rootfs/. /
 RUN rm -rf /etc/s6/olsrd
 
 COPY mesh-manager /usr/bin/mesh-manager
-CMD ["bash", "/usr/bin/start.sh"]
+CMD ["/usr/bin/start.sh"]
