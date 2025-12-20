@@ -42,30 +42,49 @@ const (
 	lqmInfoPath         = "/tmp/lqm.info"
 )
 
+type SysinfoResponse struct {
+	Node        string             `json:"node"`
+	Lat         string             `json:"lat"`
+	Lon         string             `json:"lon"`
+	NodeDetails SysinfoNodeDetails `json:"node_details"`
+	Interfaces  []SysinfoInterface `json:"interfaces"`
+	Lqm         LQM                `json:"lqm"`
+}
+
+type SysinfoInterface struct {
+	Mac string `json:"mac"`
+	IP  string `json:"ip"`
+}
+
+type SysinfoNodeDetails struct {
+	Model           string `json:"model"`
+	FirmwareVersion string `json:"firmware_version"`
+}
+
 type Tracker struct {
 	FirstSeen          time.Time    `json:"-"`
-	LastSeen           time.Time    `json:"-"`
-	LastUp             time.Time    `json:"-"`
+	LastSeen           time.Time    `json:"lastseen"`
+	LastUp             time.Time    `json:"lastup"`
 	Type               DeviceType   `json:"type"`
 	Device             string       `json:"device"`
 	MAC                string       `json:"mac"`
 	IPv6LL             string       `json:"ipv6ll"`
-	Refresh            time.Time    `json:"-"`
-	LQ                 int          `json:"-"`
-	RxCost             int          `json:"-"`
-	TxCost             int          `json:"-"`
+	Refresh            time.Time    `json:"refresh"`
+	LQ                 int          `json:"lq"`
+	RxCost             int          `json:"rxcost"`
+	TxCost             int          `json:"txcost"`
 	RTT                int          `json:"rtt"`
-	TxPackets          uint64       `json:"tx"`
+	TxPackets          uint64       `json:"tx_packets"`
 	TxFail             uint64       `json:"tx_fail"`
-	TxRetries          uint64       `json:"tx_retries"`
-	LastTxPackets      *uint64      `json:"-"`
+	TxRetries          uint64       `json:"-"`
+	LastTxPackets      *uint64      `json:"last_tx_packets"`
 	LastTxFail         *uint64      `json:"-"`
 	LastTxRetries      *uint64      `json:"-"`
-	AvgTx              float64      `json:"avg_tx"`
-	AvgTxFail          float64      `json:"avg_tx_fail"`
-	AvgTxRetries       float64      `json:"avg_tx_retries"`
+	AvgTx              float64      `json:"avg_tx_packets"`
+	AvgTxFail          float64      `json:"-"`
+	AvgTxRetries       float64      `json:"-"`
 	TxQuality          float64      `json:"tx_quality"`
-	PingQuality        float64      `json:"ping_quality"`
+	PingQuality        int          `json:"ping_quality"`
 	PingSuccessTime    float64      `json:"ping_success_time"`
 	Quality            int          `json:"quality"`
 	Hostname           string       `json:"hostname"`
@@ -79,9 +98,9 @@ type Tracker struct {
 	FirmwareVersion    string       `json:"firmware_version"`
 	RevLastSeen        time.Time    `json:"-"`
 	RevPingSuccessTime float64      `json:"rev_ping_success_time"`
-	RevPingQuality     float64      `json:"rev_ping_quality"`
+	RevPingQuality     int          `json:"rev_ping_quality"`
 	RevQuality         int          `json:"rev_quality"`
-	NodeRouteCount     int          `json:"node_route_count"`
+	NodeRouteCount     int          `json:"-"`
 	BabelRouteCount    int          `json:"babel_route_count"`
 	BabelMetric        int          `json:"babel_metric"`
 	Routable           bool         `json:"routable"`
@@ -95,38 +114,22 @@ type BabelConfig struct {
 	RxCost         int `json:"rxcost"`
 }
 
-type SysinfoResponse struct {
-	Node        string             `json:"node"`
-	Lat         string             `json:"lat"`
-	Lon         string             `json:"lon"`
-	NodeDetails SysinfoNodeDetails `json:"node_details"`
-	Interfaces  []SysinfoInterface `json:"interfaces"`
-	Lqm         SysinfoLqm         `json:"lqm"`
+type LQM struct {
+	Enabled bool      `json:"enabled"`
+	Config  LQMConfig `json:"config"`
+	Info    LQMInfo   `json:"info"`
 }
 
-type SysinfoNodeDetails struct {
-	Model           string `json:"model"`
-	FirmwareVersion string `json:"firmware_version"`
+type LQMConfig struct {
+	UserBlocks string `json:"user_blocks"`
 }
 
-type SysinfoInterface struct {
-	Mac string `json:"mac"`
-	IP  string `json:"ip"`
-}
-
-type SysinfoLqm struct {
-	Info SysinfoLqmInfo `json:"info"`
-}
-
-type SysinfoLqmInfo struct {
-	Trackers map[string]SysinfoTracker `json:"trackers"`
-}
-
-type SysinfoTracker struct {
-	Hostname        string  `json:"hostname"`
-	PingSuccessTime float64 `json:"ping_success_time"`
-	PingQuality     float64 `json:"ping_quality"`
-	Quality         int     `json:"quality"`
+type LQMInfo struct {
+	Trackers        map[string]*Tracker `json:"trackers"`
+	Start           int64               `json:"start"`
+	Now             int64               `json:"now"`
+	Distance        int64               `json:"distance"`
+	TotalRouteCount int64               `json:"total_route_count"`
 }
 
 type DeviceType string
@@ -663,7 +666,7 @@ func (s *Service) pingTracker(ctx context.Context, t *Tracker) {
 		}
 	}
 
-	t.PingQuality = math.Max(0, math.Min(100, t.PingQuality))
+	t.PingQuality = int(math.Max(0, math.Min(100, float64(t.PingQuality))))
 
 	if success {
 		if !s.lastTick.IsZero() && t.LastSeen.Add(lastUpMargin).Before(s.lastTick) {
@@ -680,12 +683,12 @@ func (s *Service) calculateQuality(t *Tracker) {
 	switch {
 	case t.TxQuality > 0:
 		if t.PingQuality > 0 {
-			t.Quality = int(math.Round((t.TxQuality + t.PingQuality) / 2))
+			t.Quality = int(math.Round((t.TxQuality + float64(t.PingQuality)) / 2))
 		} else {
 			t.Quality = int(math.Round(t.TxQuality))
 		}
 	case t.PingQuality > 0:
-		t.Quality = int(math.Round(t.PingQuality))
+		t.Quality = int(math.Round(float64(t.PingQuality)))
 	default:
 		t.Quality = 0
 	}
@@ -697,71 +700,12 @@ func (s *Service) writeState() {
 
 	slog.Info("LQM: Writing state", "trackers_count", len(s.trackers))
 
-	now := time.Now()
-	nowSecs := int(now.Sub(s.startTime).Seconds())
-
-	// Convert trackers to JSON-friendly format with relative timestamps
-	jsonTrackers := make(map[string]map[string]interface{})
-	for mac, t := range s.trackers {
-		tracker := map[string]interface{}{
-			"firstseen":             int(t.FirstSeen.Sub(s.startTime).Seconds()),
-			"lastseen":              int(t.LastSeen.Sub(s.startTime).Seconds()),
-			"type":                  t.Type,
-			"device":                t.Device,
-			"mac":                   t.MAC,
-			"ipv6ll":                t.IPv6LL,
-			"refresh":               int(t.Refresh.Sub(s.startTime).Seconds()),
-			"rtt":                   t.RTT,
-			"tx":                    t.TxPackets,
-			"tx_fail":               t.TxFail,
-			"tx_retries":            t.TxRetries,
-			"avg_tx":                t.AvgTx,
-			"avg_tx_fail":           t.AvgTxFail,
-			"avg_tx_retries":        t.AvgTxRetries,
-			"tx_quality":            t.TxQuality,
-			"ping_quality":          t.PingQuality,
-			"ping_success_time":     t.PingSuccessTime,
-			"quality":               t.Quality,
-			"hostname":              t.Hostname,
-			"canonical_ip":          t.CanonicalIP,
-			"ip":                    t.IP,
-			"lat":                   t.Lat,
-			"lon":                   t.Lon,
-			"distance":              t.Distance,
-			"localarea":             t.LocalArea,
-			"model":                 t.Model,
-			"firmware_version":      t.FirmwareVersion,
-			"rev_ping_success_time": t.RevPingSuccessTime,
-			"rev_ping_quality":      t.RevPingQuality,
-			"rev_quality":           t.RevQuality,
-			"node_route_count":      t.NodeRouteCount,
-			"babel_route_count":     t.BabelRouteCount,
-			"babel_metric":          t.BabelMetric,
-			"routable":              t.Routable,
-			"user_blocks":           t.UserBlocks,
-		}
-		// Only include rev_lastseen if it's been set (not zero time)
-		if !t.RevLastSeen.IsZero() {
-			tracker["rev_lastseen"] = int(t.RevLastSeen.Sub(s.startTime).Seconds())
-		}
-		if t.BabelConfig != nil {
-			tracker["babel_config"] = map[string]interface{}{
-				"hello_interval":  t.BabelConfig.HelloInterval / 1000,
-				"update_interval": t.BabelConfig.UpdateInterval / 1000,
-				"rxcost":          t.BabelConfig.RxCost,
-			}
-		}
-		jsonTrackers[mac] = tracker
-	}
-
-	state := map[string]interface{}{
-		"now":                    nowSecs,
-		"trackers":               jsonTrackers,
-		"distance":               defaultMaxDistance,
-		"hidden_nodes":           []string{},
-		"total_node_route_count": s.totalNodeRouteCount,
-		"coverage":               0,
-		"babel":                  true,
+	state := LQMInfo{
+		Now:             time.Now().Unix(),
+		Trackers:        s.trackers,
+		Distance:        defaultMaxDistance,
+		Start:           s.startTime.Unix(),
+		TotalRouteCount: int64(s.totalRouteCount),
 	}
 
 	file, err := os.Create(lqmInfoPath)

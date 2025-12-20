@@ -1,5 +1,7 @@
 package apimodels
 
+import "github.com/USA-RedDragon/mesh-manager/internal/services/lqm"
+
 type Sysinfo struct {
 	Uptime  string     `json:"uptime"`
 	Loadavg [3]float64 `json:"loads"`
@@ -23,22 +25,6 @@ type Tunnels struct {
 	ActiveTunnelCount    int `json:"active_tunnel_count"`
 	WireguardTunnelCount int `json:"wireguard_tunnel_count"`
 	LegacyTunnelCount    int `json:"legacy_tunnel_count"`
-}
-
-type LQM struct {
-	Enabled bool     `json:"enabled"`
-	Info    *LQMInfo `json:"info,omitempty"`
-}
-
-type LQMInfo struct {
-	Trackers map[string]LQMTracker `json:"trackers"`
-}
-
-type LQMTracker struct {
-	Hostname        string  `json:"hostname"`
-	PingSuccessTime float64 `json:"ping_success_time"`
-	PingQuality     float64 `json:"ping_quality"`
-	Quality         int     `json:"quality"`
 }
 
 type Interface struct {
@@ -94,7 +80,7 @@ type SysinfoResponse struct {
 	Node        string              `json:"node"`
 	NodeDetails NodeDetails         `json:"node_details"`
 	Tunnels     Tunnels             `json:"tunnels"`
-	LQM         LQM                 `json:"lqm"`
+	LQM         lqm.LQM             `json:"lqm"`
 	Interfaces  []Interface         `json:"interfaces"`
 	Hosts       []Host              `json:"hosts"`
 	Services    []Service           `json:"services"`

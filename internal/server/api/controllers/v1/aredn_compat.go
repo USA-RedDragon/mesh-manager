@@ -20,6 +20,7 @@ import (
 	"github.com/USA-RedDragon/mesh-manager/internal/db/models"
 	"github.com/USA-RedDragon/mesh-manager/internal/server/api/apimodels"
 	"github.com/USA-RedDragon/mesh-manager/internal/server/api/middleware"
+	"github.com/USA-RedDragon/mesh-manager/internal/services/lqm"
 	"github.com/USA-RedDragon/mesh-manager/internal/services/meshlink"
 	"github.com/USA-RedDragon/mesh-manager/internal/services/olsr"
 	"github.com/USA-RedDragon/mesh-manager/internal/utils"
@@ -371,7 +372,7 @@ func GETSysinfo(c *gin.Context) {
 			WireguardTunnelCount: wgTunnels,
 			LegacyTunnelCount:    legacyTunnels,
 		},
-		LQM: apimodels.LQM{
+		LQM: lqm.LQM{
 			Enabled: di.Config.LQM.Enabled,
 		},
 		Interfaces: getInterfaces(),
@@ -392,7 +393,7 @@ func GETSysinfo(c *gin.Context) {
 	if doLQM && di.Config.LQM.Enabled {
 		lqmInfo := getLQMInfo()
 		if lqmInfo != nil {
-			sysinfo.LQM.Info = lqmInfo
+			sysinfo.LQM.Info = *lqmInfo
 		}
 	}
 
@@ -610,7 +611,7 @@ func getServices(ctx context.Context, parser *olsr.ServicesParser) []apimodels.S
 	return ret
 }
 
-func getLQMInfo() *apimodels.LQMInfo {
+func getLQMInfo() *lqm.LQMInfo {
 	// Read /tmp/lqm.info
 	file, err := os.Open("/tmp/lqm.info")
 	if err != nil {
@@ -618,36 +619,11 @@ func getLQMInfo() *apimodels.LQMInfo {
 	}
 	defer file.Close()
 
-	var lqmData struct {
-		Trackers map[string]map[string]interface{} `json:"trackers"`
-	}
+	var lqmData lqm.LQMInfo
 
 	if err := json.NewDecoder(file).Decode(&lqmData); err != nil {
 		return nil
 	}
 
-	// Convert to apimodels format
-	trackers := make(map[string]apimodels.LQMTracker)
-	for mac, data := range lqmData.Trackers {
-		tracker := apimodels.LQMTracker{}
-
-		if hostname, ok := data["hostname"].(string); ok {
-			tracker.Hostname = hostname
-		}
-		if pingSuccessTime, ok := data["ping_success_time"].(float64); ok {
-			tracker.PingSuccessTime = pingSuccessTime
-		}
-		if pingQuality, ok := data["ping_quality"].(float64); ok {
-			tracker.PingQuality = pingQuality
-		}
-		if quality, ok := data["quality"].(float64); ok {
-			tracker.Quality = int(quality)
-		}
-
-		trackers[mac] = tracker
-	}
-
-	return &apimodels.LQMInfo{
-		Trackers: trackers,
-	}
+	return &lqmData
 }
