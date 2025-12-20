@@ -25,7 +25,7 @@ jobs:
       - run: cd frontend && npm ci --ignore-scripts
       - run: cd frontend && npm run build
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: frontend
           path: frontend/dist
@@ -59,7 +59,7 @@ jobs:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           report-json: "frontend/eslint_report.json"
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: frontend-eslint-report
@@ -85,7 +85,7 @@ jobs:
       - run: cd frontend && npm ci --ignore-scripts
       - run: cd frontend && npm run test:unit
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: frontend-unit-test-report
@@ -131,7 +131,7 @@ jobs:
       - run: cd frontend && NODE_ENV=test npm run build
       - run: cd frontend && BROWSER=${{ matrix.browser }} NODE_ENV=test npm run test:e2e:${{ matrix.browser }}
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: frontend-e2e-test-report-${{ matrix.browser }}
@@ -153,7 +153,7 @@ jobs:
           check_name: Frontend E2E Tests (${{ matrix.browser }})
           job_name: Tests
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: frontend-e2e-screenshots-${{ matrix.browser }}
@@ -161,7 +161,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: frontend-e2e-videos-${{ matrix.browser }}
@@ -186,7 +186,7 @@ jobs:
       - run: cd new-frontend && npm ci --ignore-scripts
       - run: cd new-frontend && npm run build
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: new-frontend
           path: new-frontend/dist
@@ -221,7 +221,7 @@ jobs:
           report-json: "new-frontend/eslint_report.json"
           check-name: New Frontend ESLint Report Analysis
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: new-frontend-eslint-report
@@ -247,7 +247,7 @@ jobs:
       - run: cd new-frontend && npm ci --ignore-scripts
       - run: cd new-frontend && npm run test:unit
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: new-frontend-unit-test-report
@@ -293,7 +293,7 @@ jobs:
       - run: cd new-frontend && NODE_ENV=test npm run build
       - run: cd new-frontend && BROWSER=${{ matrix.browser }} NODE_ENV=test npm run test:e2e:${{ matrix.browser }}
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: new-frontend-e2e-test-report-${{ matrix.browser }}
@@ -315,7 +315,7 @@ jobs:
           check_name: New Frontend E2E Tests (${{ matrix.browser }})
           job_name: Tests
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: new-frontend-e2e-screenshots-${{ matrix.browser }}
@@ -323,7 +323,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: new-frontend-e2e-videos-${{ matrix.browser }}
@@ -403,7 +403,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Backend Unit Tests
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: backend-test-report-xml
@@ -411,7 +411,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: backend-test-report-html
@@ -445,7 +445,7 @@ jobs:
           flags: backend
           fail_ci_if_error: true
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: backend-coverage
