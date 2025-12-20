@@ -3,7 +3,7 @@ version: "3"
 services:
   postgres:
     container_name: postgres
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:ff4ccc02b97e0ebb6b328ef9ff92522f95586f83be6801896b615088defc8ad2
     restart: unless-stopped
     environment:
       - POSTGRES_USER=mesh_manager
@@ -32,7 +32,7 @@ services:
 
   node-exporter:
     container_name: node-exporter
-    image: quay.io/prometheus/node-exporter:latest
+    image: quay.io/prometheus/node-exporter:latest@sha256:337ff1d356b68d39cef853e8c6345de11ce7556bb34cda8bd205bcf2ed30b565
     restart: unless-stopped
     privileged: true
     volumes:
