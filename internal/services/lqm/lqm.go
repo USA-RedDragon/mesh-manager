@@ -122,7 +122,7 @@ type LQM struct {
 }
 
 type LQMInfo struct {
-	Trackers        map[string]*Tracker `json:"trackers"`
+	Trackers        any                 `json:"trackers"`
 	Start           int64               `json:"start"`
 	Now             int64               `json:"now"`
 	Distance        any                 `json:"distance"`
@@ -608,14 +608,22 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 	// Reverse stats
 	myHostname := canonicalHostname(s.config.ServerName)
 	if info.Lqm.Info.Trackers != nil {
-		for _, rtrack := range info.Lqm.Info.Trackers {
-			if myHostname == canonicalHostname(rtrack.Hostname) {
-				t.RevPingSuccessTime = rtrack.PingSuccessTime
-				t.RevPingQuality = rtrack.PingQuality
-				t.RevQuality = rtrack.Quality
-				break
+		switch trackers := info.Lqm.Info.Trackers.(type) {
+		case map[string]Tracker:
+			for _, rtrack := range trackers {
+				if myHostname == canonicalHostname(rtrack.Hostname) {
+					t.RevPingSuccessTime = rtrack.PingSuccessTime
+					t.RevPingQuality = rtrack.PingQuality
+					t.RevQuality = rtrack.Quality
+					break
+				}
 			}
+		case []any:
+			// Older AREDN versions return an array instead of a map
+			// I only see one instance in the wild, so we log and skip
+			slog.Warn("LQM: Unexpected format for remote LQM trackers; expected map but got array", "mac", t.MAC, "hostname", t.Hostname)
 		}
+		
 	}
 
 	return nil
