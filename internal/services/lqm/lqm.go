@@ -553,6 +553,7 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 	t.Lon = info.Lon
 
 	t.Hostname = canonicalHostname(info.Node)
+	t.CanonicalIP = meshIPForHostname(t.Hostname)
 
 	if t.Type == DeviceTypeWireguard {
 		// Ensure IP is set for Wireguard
@@ -781,6 +782,20 @@ func canonicalHostname(hostname string) string {
 	h = strings.TrimSuffix(h, ".local.mesh")
 	h = strings.TrimPrefix(h, "dtdlink.")
 	return h
+}
+
+func meshIPForHostname(hostname string) string {
+	resolver := &net.Resolver{}
+	addrs, err := resolver.LookupIPAddr(context.Background(), hostname)
+	if err != nil {
+		return ""
+	}
+	for _, addr := range addrs {
+		if addr.IP.To4() != nil {
+			return addr.IP.String()
+		}
+	}
+	return ""
 }
 
 func calcDistance(lat1, lon1, lat2, lon2 float64) float64 {
