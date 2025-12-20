@@ -45,8 +45,8 @@ const (
 
 type SysinfoResponse struct {
 	Node        string             `json:"node"`
-	Lat         any            `json:"lat"`
-	Lon         any            `json:"lon"`
+	Lat         any                `json:"lat"`
+	Lon         any                `json:"lon"`
 	NodeDetails SysinfoNodeDetails `json:"node_details"`
 	Interfaces  []SysinfoInterface `json:"interfaces"`
 	Lqm         LQM                `json:"lqm"`
@@ -578,7 +578,7 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 	}
 
 	t.Hostname = canonicalHostname(info.Node)
-	t.CanonicalIP = meshIPForHostname(t.Hostname)
+	t.CanonicalIP = meshIPForHostname(ctx, t.Hostname)
 
 	if t.Type == DeviceTypeWireguard {
 		// Ensure IP is set for Wireguard
@@ -809,9 +809,9 @@ func canonicalHostname(hostname string) string {
 	return h
 }
 
-func meshIPForHostname(hostname string) string {
+func meshIPForHostname(ctx context.Context, hostname string) string {
 	resolver := &net.Resolver{}
-	addrs, err := resolver.LookupIPAddr(context.Background(), hostname)
+	addrs, err := resolver.LookupIPAddr(ctx, hostname)
 	if err != nil {
 		return ""
 	}
