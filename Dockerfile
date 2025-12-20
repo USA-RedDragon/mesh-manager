@@ -1,4 +1,4 @@
-FROM node:22.21.1-alpine@sha256:0340fa682d72068edf603c305bfbc10e23219fb0e40df58d9ea4d6f33a9798bf AS frontend-build
+FROM node:24.12.0-alpine@sha256:c921b97d4b74f51744057454b306b418cf693865e73b8100559189605f6955b8 AS frontend-build
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ ENV NODE_ENV=production
 
 RUN npm run build -- --base=/a/
 
-FROM node:22.21.1-alpine@sha256:0340fa682d72068edf603c305bfbc10e23219fb0e40df58d9ea4d6f33a9798bf AS new-frontend-build
+FROM node:24.12.0-alpine@sha256:c921b97d4b74f51744057454b306b418cf693865e73b8100559189605f6955b8 AS new-frontend-build
 
 WORKDIR /app
 
