@@ -582,7 +582,7 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 		}
 	} else {
 		for _, iface := range info.Interfaces {
-			if strings.EqualFold(iface.Mac, t.MAC) {
+			if strings.EqualFold(iface.Mac, t.MAC) && iface.IP != "" {
 				t.IP = iface.IP
 				break
 			}
