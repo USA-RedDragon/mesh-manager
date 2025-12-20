@@ -118,12 +118,7 @@ type BabelConfig struct {
 
 type LQM struct {
 	Enabled bool      `json:"enabled"`
-	Config  LQMConfig `json:"config"`
 	Info    LQMInfo   `json:"info"`
-}
-
-type LQMConfig struct {
-	UserBlocks string `json:"user_blocks"`
 }
 
 type LQMInfo struct {
