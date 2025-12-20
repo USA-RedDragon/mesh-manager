@@ -31,6 +31,7 @@ const (
 	refreshRetryTimeout = 5 * 60 * time.Second
 	lastSeenTimeout     = 24 * time.Hour
 	txQualityRunAvg     = 0.4
+	lqRunAvg            = 0.4
 	pingTimeout         = 1.0 * time.Second
 	pingTimeRunAvg      = 0.4
 	dtdDistance         = 50 // meters
@@ -71,6 +72,7 @@ type Tracker struct {
 	IPv6LL             string       `json:"ipv6ll"`
 	Refresh            time.Time    `json:"refresh"`
 	LQ                 int          `json:"lq"`
+	AvgLQ              float64      `json:"avg_lq"`
 	RxCost             int          `json:"rxcost"`
 	TxCost             int          `json:"txcost"`
 	RTT                int          `json:"rtt"`
@@ -354,21 +356,27 @@ func (s *Service) updateNeighbors(ctx context.Context) {
 			tracker.LQ = reachToLQ(reach)
 			tracker.RxCost = rxcost
 			tracker.TxCost = txcost
+			tracker.AvgLQ = math.Min(100, 0.9 * tracker.AvgLQ + 0.1 * float64(tracker.LQ))
 
 			// Populate BabelConfig with defaults
 			if tracker.BabelConfig == nil {
 				// Default for DtD/Wired
 				rxcost := 96
-				helloInterval := 4000 // Default 4s
+				helloInterval := 6
+				updateInterval := 120
+
+				if s.config.Supernode {
+					updateInterval = 300
+				}
 
 				if devType == DeviceTypeWireguard {
 					rxcost = 206
-					helloInterval = 10000 // 10s
+					helloInterval = 10
 				}
 
 				tracker.BabelConfig = &BabelConfig{
 					HelloInterval:  helloInterval,
-					UpdateInterval: helloInterval * 4,
+					UpdateInterval: updateInterval,
 					RxCost:         rxcost,
 				}
 			}
