@@ -9,7 +9,7 @@ COPY frontend/. .
 
 ENV NODE_ENV=production
 
-RUN npm run build -- --base=/a/
+RUN npm run build -- --base=/ui-a/
 
 FROM node:22.21.0-alpine AS new-frontend-build
 
@@ -22,7 +22,7 @@ COPY new-frontend/. .
 
 ENV NODE_ENV=production
 
-RUN npm run build -- --base=/b/
+RUN npm run build -- --base=/ui-b/
 
 FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:ecd2d6343483d01d522f5db304459adaa1f3212436662a22aeb15bebdcb5c43f
 
