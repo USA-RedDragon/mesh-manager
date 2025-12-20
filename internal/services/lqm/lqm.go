@@ -125,7 +125,7 @@ type LQMInfo struct {
 	Trackers        map[string]*Tracker `json:"trackers"`
 	Start           int64               `json:"start"`
 	Now             int64               `json:"now"`
-	Distance        int64               `json:"distance"`
+	Distance        any                 `json:"distance"`
 	TotalRouteCount int64               `json:"total_route_count"`
 }
 
@@ -494,7 +494,7 @@ func (s *Service) remoteRefresh(ctx context.Context) {
 			}
 			defer s.httpSem.Release(1)
 			if err := s.refreshTracker(ctx, tracker); err != nil {
-				slog.Warn("LQM: Failed to refresh tracker", "mac", tracker.MAC, "error", err)
+				slog.Warn("LQM: Failed to refresh tracker", "mac", tracker.MAC, "ip", tracker.IP, "hostname", tracker.Hostname, "error", err)
 			}
 		}()
 	}
