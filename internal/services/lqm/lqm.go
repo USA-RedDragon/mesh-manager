@@ -63,14 +63,14 @@ type SysinfoNodeDetails struct {
 }
 
 type Tracker struct {
-	FirstSeen          time.Time    `json:"-"`
-	LastSeen           time.Time    `json:"lastseen"`
-	LastUp             time.Time    `json:"lastup"`
+	FirstSeen          int          `json:"-"`
+	LastSeen           int          `json:"lastseen"`
+	LastUp             int          `json:"lastup"`
 	Type               DeviceType   `json:"type"`
 	Device             string       `json:"device"`
 	MAC                string       `json:"mac"`
 	IPv6LL             string       `json:"ipv6ll"`
-	Refresh            time.Time    `json:"refresh"`
+	Refresh            int          `json:"refresh"`
 	LQ                 int          `json:"lq"`
 	AvgLQ              float64      `json:"avg_lq"`
 	RxCost             int          `json:"rxcost"`
@@ -98,7 +98,7 @@ type Tracker struct {
 	LocalArea          bool         `json:"localarea"`
 	Model              string       `json:"model"`
 	FirmwareVersion    string       `json:"firmware_version"`
-	RevLastSeen        time.Time    `json:"-"`
+	RevLastSeen        int          `json:"-"`
 	RevPingSuccessTime float64      `json:"rev_ping_success_time"`
 	RevPingQuality     int          `json:"rev_ping_quality"`
 	RevQuality         int          `json:"rev_quality"`
@@ -267,8 +267,9 @@ func (s *Service) pruneTrackers(now time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for mac, t := range s.trackers {
-		if now.Sub(t.LastSeen) > lastSeenTimeout {
-			slog.Info("LQM: Pruning tracker", "mac", mac, "last_seen", t.LastSeen, "age", now.Sub(t.LastSeen))
+		lastSeenTime := time.Unix(int64(t.LastSeen), 0)
+		if now.Sub(lastSeenTime) > lastSeenTimeout {
+			slog.Info("LQM: Pruning tracker", "mac", mac, "last_seen", t.LastSeen, "age", now.Sub(lastSeenTime))
 			delete(s.trackers, mac)
 		}
 	}
@@ -333,9 +334,9 @@ func (s *Service) updateNeighbors(ctx context.Context) {
 			if !exists {
 				slog.Info("LQM: New neighbor detected", "mac", mac, "iface", iface, "type", devType)
 				tracker = &Tracker{
-					FirstSeen: now,
-					LastSeen:  now,
-					LastUp:    now,
+					FirstSeen: int(now.Unix()),
+					LastSeen:  int(now.Unix()),
+					LastUp:    int(now.Unix()),
 					Type:      devType,
 					Device:    iface,
 					MAC:       mac,
@@ -352,7 +353,7 @@ func (s *Service) updateNeighbors(ctx context.Context) {
 				slog.Debug("LQM: Updated IP for existing Wireguard tracker", "mac", mac, "device", iface, "ip", tracker.IP)
 			}
 
-			tracker.LastSeen = now
+			tracker.LastSeen = int(now.Unix())
 			tracker.LQ = reachToLQ(reach)
 			tracker.RxCost = rxcost
 			tracker.TxCost = txcost
@@ -478,13 +479,12 @@ func (s *Service) updateRunningAverages() {
 func (s *Service) remoteRefresh(ctx context.Context) {
 	s.mu.Lock()
 	trackersToRefresh := make([]*Tracker, 0)
-	now := time.Now()
 	for _, t := range s.trackers {
-		if t.Refresh.IsZero() || now.After(t.Refresh) {
+		if t.Refresh == 0 || time.Now().After(time.Unix(int64(t.Refresh), 0)) {
 			// Mark as refreshing immediately to prevent re-scheduling in the next tick
 			// if the actual refresh takes longer than the tick interval.
 			// We set it to a retry timeout for now; success will overwrite it with the proper interval.
-			t.Refresh = now.Add(refreshRetryTimeout)
+			t.Refresh = int(time.Now().Add(refreshRetryTimeout).Unix())
 			trackersToRefresh = append(trackersToRefresh, t)
 		}
 	}
@@ -546,8 +546,8 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 			jitter = time.Duration(n.Int64())
 		}
 	}
-	t.Refresh = time.Now().Add(refreshTimeoutBase + jitter)
-	t.RevLastSeen = time.Now()
+	t.Refresh = int(time.Now().Add(refreshTimeoutBase + jitter).Unix())
+	t.RevLastSeen = int(time.Now().Unix())
 
 	t.Hostname = canonicalHostname(info.Node)
 
@@ -677,10 +677,11 @@ func (s *Service) pingTracker(ctx context.Context, t *Tracker) {
 	t.PingQuality = int(math.Max(0, math.Min(100, float64(t.PingQuality))))
 
 	if success {
-		if !s.lastTick.IsZero() && t.LastSeen.Add(lastUpMargin).Before(s.lastTick) {
-			t.LastUp = time.Now()
+		lastSeenTime := time.Unix(int64(t.LastSeen), 0)
+		if !s.lastTick.IsZero() && lastSeenTime.Add(lastUpMargin).Before(s.lastTick) {
+			t.LastUp = int(time.Now().Unix())
 		}
-		t.LastSeen = time.Now()
+		t.LastSeen = int(time.Now().Unix())
 	}
 }
 
