@@ -47,6 +47,7 @@ func ApplyRoutes(router *gin.Engine, eventsChannel chan events.Event, config *co
 
 func meshCompat(router *gin.Engine, ratelimitMW gin.HandlerFunc) {
 	router.GET("/cgi-bin/sysinfo.json", ratelimitMW, v1Controllers.GETSysinfo)
+	router.GET("/a/sysinfo", ratelimitMW, v1Controllers.GETSysinfo)
 	router.GET("/cgi-bin/metrics", ratelimitMW, v1Controllers.GETMetrics)
 	router.GET("/cgi-bin/mesh", ratelimitMW, v1Controllers.GETMesh)
 	router.GET("/cgi-bin/iperf", ratelimitMW, v1Controllers.GETIPerf)
