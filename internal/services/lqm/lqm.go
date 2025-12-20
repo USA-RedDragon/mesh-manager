@@ -117,8 +117,8 @@ type BabelConfig struct {
 }
 
 type LQM struct {
-	Enabled bool      `json:"enabled"`
-	Info    LQMInfo   `json:"info"`
+	Enabled bool    `json:"enabled"`
+	Info    LQMInfo `json:"info"`
 }
 
 type LQMInfo struct {
@@ -352,7 +352,7 @@ func (s *Service) updateNeighbors(ctx context.Context) {
 			tracker.LQ = reachToLQ(reach)
 			tracker.RxCost = rxcost
 			tracker.TxCost = txcost
-			tracker.AvgLQ = math.Min(100, 0.9 * tracker.AvgLQ + 0.1 * float64(tracker.LQ))
+			tracker.AvgLQ = math.Min(100, 0.9*tracker.AvgLQ+0.1*float64(tracker.LQ))
 
 			// Populate BabelConfig with defaults
 			if tracker.BabelConfig == nil {
