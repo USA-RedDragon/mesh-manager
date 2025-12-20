@@ -499,7 +499,7 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 		return nil
 	}
 
-	url := fmt.Sprintf("http://[%s%%%s]:8080/cgi-bin/sysinfo.json?lqm=1", t.IPv6LL, t.Device)
+	url := fmt.Sprintf("http://[%s%%25%s]:8080/cgi-bin/sysinfo.json?lqm=1", t.IPv6LL, t.Device)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
