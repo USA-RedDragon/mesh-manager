@@ -45,8 +45,8 @@ const (
 
 type SysinfoResponse struct {
 	Node        string             `json:"node"`
-	Lat         float64            `json:"lat"`
-	Lon         float64            `json:"lon"`
+	Lat         any            `json:"lat"`
+	Lon         any            `json:"lon"`
 	NodeDetails SysinfoNodeDetails `json:"node_details"`
 	Interfaces  []SysinfoInterface `json:"interfaces"`
 	Lqm         LQM                `json:"lqm"`
@@ -549,8 +549,33 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 	t.Refresh = int(time.Now().Add(refreshTimeoutBase + jitter).Unix())
 	t.RevLastSeen = int(time.Now().Unix())
 
-	t.Lat = info.Lat
-	t.Lon = info.Lon
+	switch lat := info.Lat.(type) {
+	case float64:
+		t.Lat = lat
+	case string:
+		parsedLat, err := strconv.ParseFloat(lat, 64)
+		if err == nil {
+			t.Lat = parsedLat
+		} else {
+			t.Lat = 0.0
+		}
+	default:
+		t.Lat = 0.0
+	}
+
+	switch lon := info.Lon.(type) {
+	case float64:
+		t.Lon = lon
+	case string:
+		parsedLon, err := strconv.ParseFloat(lon, 64)
+		if err == nil {
+			t.Lon = parsedLon
+		} else {
+			t.Lon = 0.0
+		}
+	default:
+		t.Lon = 0.0
+	}
 
 	t.Hostname = canonicalHostname(info.Node)
 	t.CanonicalIP = meshIPForHostname(t.Hostname)
