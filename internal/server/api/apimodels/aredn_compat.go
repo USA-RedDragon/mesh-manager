@@ -20,13 +20,13 @@ type NodeDetails struct {
 }
 
 type Tunnels struct {
-	ActiveTunnelCount int `json:"active_tunnel_count"`
+	ActiveTunnelCount    int `json:"active_tunnel_count"`
 	WireguardTunnelCount int `json:"wireguard_tunnel_count"`
-	LegacyTunnelCount int `json:"legacy_tunnel_count"`
+	LegacyTunnelCount    int `json:"legacy_tunnel_count"`
 }
 
 type LQM struct {
-	Enabled bool    `json:"enabled"`
+	Enabled bool     `json:"enabled"`
 	Info    *LQMInfo `json:"info,omitempty"`
 }
 

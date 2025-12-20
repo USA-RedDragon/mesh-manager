@@ -35,7 +35,6 @@ linters:
     - prealloc
     - predeclared
     - reassign
-    - revive
     - unconvert
     - unparam
     - usestdlibvars

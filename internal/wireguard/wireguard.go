@@ -104,7 +104,7 @@ func (m *Manager) run() {
 	for {
 		select {
 		case peer := <-m.peerAddChan:
-			go m.addPeer(peer)
+			go m.addPeer(context.Background(), peer)
 		case peer := <-m.peerRemoveChan:
 			go m.removePeer(peer)
 		case <-m.shutdownChan:
@@ -138,7 +138,7 @@ func (wglink *WG) Type() string {
 }
 
 //nolint:gocyclo
-func (m *Manager) addPeer(peer models.Tunnel) {
+func (m *Manager) addPeer(ctx context.Context, peer models.Tunnel) {
 	// Create a new wireguard interface listening on the port from the peer tunnel
 	// If the peer is a client, then the password is the public key of the client
 	// If the peer is a server, then the password is the private key of the server
@@ -283,7 +283,8 @@ func (m *Manager) addPeer(peer models.Tunnel) {
 		// Check if the hostname is an IP address or a domain name
 		if net.ParseIP(hostnameParts[0]) == nil {
 			// It's a domain name
-			ips, err := net.LookupIP(hostnameParts[0])
+			resolver := &net.Resolver{}
+			ips, err := resolver.LookupIPAddr(ctx, hostnameParts[0])
 			if err != nil {
 				slog.Error("failed to lookup IPs for hostname", "hostname", hostnameParts[0], "error", err)
 				return

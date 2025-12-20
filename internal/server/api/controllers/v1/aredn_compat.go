@@ -26,6 +26,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+//nolint:gocyclo
 func GETIPerf(c *gin.Context) {
 	c.Header("Content-Type", "text/html")
 	c.Header("Cache-Control", "no-store")
@@ -49,10 +50,14 @@ func GETIPerf(c *gin.Context) {
 	if server == "" {
 		// Server mode
 		if kill {
-			exec.Command("killall", "-9", "iperf3").Run()
+			err := exec.CommandContext(c.Request.Context(), "killall", "-9", "iperf3").Run()
+			if err != nil {
+				fmt.Fprint(c.Writer, "<html><head><title>ERROR</title></head><body><pre>iperf server failed to stop</pre></body></html>\n")
+				return
+			}
 		} else {
 			// Check if running
-			out, _ := exec.Command("pidof", "iperf3").Output()
+			out, _ := exec.CommandContext(c.Request.Context(), "pidof", "iperf3").Output()
 			if len(out) > 0 {
 				fmt.Fprint(c.Writer, "<html><head><title>BUSY</title></head><body><pre>iperf server busy</pre></body></html>\n")
 				return
@@ -60,7 +65,7 @@ func GETIPerf(c *gin.Context) {
 		}
 
 		// Start server
-		cmd := exec.Command("/usr/bin/iperf3", "-s", "-1", "--idle-timeout", "20", "--forceflush", "-B", "0.0.0.0")
+		cmd := exec.CommandContext(c.Request.Context(), "/usr/bin/iperf3", "-s", "-1", "--idle-timeout", "20", "--forceflush", "-B", "0.0.0.0")
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
 			fmt.Fprint(c.Writer, "<html><head><title>SERVER ERROR</title></head><body><pre>iperf server failed to start</pre></body></html>\n")
@@ -77,102 +82,122 @@ func GETIPerf(c *gin.Context) {
 
 		// Drain stdout and wait for process in background to avoid zombies
 		go func() {
-			io.Copy(io.Discard, stdout)
-			cmd.Wait()
+			_, err := io.Copy(io.Discard, stdout)
+			if err != nil {
+				slog.Error("error draining iperf server stdout", "error", err)
+			}
+			if err := cmd.Wait(); err != nil {
+				slog.Error("error waiting for iperf server process", "error", err)
+			}
 		}()
 
 		fmt.Fprint(c.Writer, "<html><head><title>RUNNING</title></head><body><pre>iperf server running</pre></body></html>\n")
 		c.Writer.Flush()
 		return
-	} else {
-		// Client mode
-		if !strings.Contains(server, ".") {
-			server += ".local.mesh"
-		}
+	}
+	// Client mode
+	if !strings.Contains(server, ".") {
+		server += ".local.mesh"
+	}
 
-		// Resolve IP
-		ips, err := net.LookupIP(server)
-		if err != nil || len(ips) == 0 {
-			fmt.Fprint(c.Writer, "<html><head><title>SERVER ERROR</title></head><body><pre>iperf no such server</pre></body></html>\n")
-			return
-		}
-		ip := ips[0].String()
+	// Resolve IP
+	resolver := &net.Resolver{}
+	ips, err := resolver.LookupIPAddr(c.Request.Context(), server)
+	if err != nil || len(ips) == 0 {
+		fmt.Fprint(c.Writer, "<html><head><title>SERVER ERROR</title></head><body><pre>iperf no such server</pre></body></html>\n")
+		return
+	}
+	ip := ips[0].String()
 
-		// Call remote
-		killParam := ""
-		if kill {
-			killParam = "kill=1&"
-		}
-		remoteURL := fmt.Sprintf("http://%s:8080/cgi-bin/iperf?%sserver=", ip, killParam)
-		resp, err := http.Get(remoteURL)
+	// Call remote
+	killParam := ""
+	if kill {
+		killParam = "kill=1&"
+	}
+	remoteURL := fmt.Sprintf("http://%s/cgi-bin/iperf?%sserver=", net.JoinHostPort(ip, "8080"), killParam)
+	u, err := url.Parse(remoteURL)
+	if err != nil || u.Scheme != "http" {
+		fmt.Fprint(c.Writer, "<html><head><title>CLIENT ERROR</title></head><body><pre>iperf invalid remote URL</pre></body></html>\n")
+		return
+	}
+
+	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, u.String(), nil)
+	if err != nil {
+		fmt.Fprint(c.Writer, "<html><head><title>CLIENT ERROR</title></head><body><pre>iperf request failed</pre></body></html>\n")
+		return
+	}
+
+	client := http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Fprint(c.Writer, "<html><head><title>CLIENT ERROR</title></head><body><pre>iperf failed to call remote server</pre></body></html>\n")
+		return
+	}
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+	for {
+		line, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Fprint(c.Writer, "<html><head><title>CLIENT ERROR</title></head><body><pre>iperf failed to call remote server</pre></body></html>\n")
-			return
-		}
-		defer resp.Body.Close()
-
-		reader := bufio.NewReader(resp.Body)
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err == io.EOF {
-					fmt.Fprint(c.Writer, "<html><head><title>ERROR</title></head><body><pre>iperf unknown error</pre></body></html>\n")
-					return
-				}
+			if err == io.EOF {
 				fmt.Fprint(c.Writer, "<html><head><title>ERROR</title></head><body><pre>iperf unknown error</pre></body></html>\n")
 				return
 			}
+			fmt.Fprint(c.Writer, "<html><head><title>ERROR</title></head><body><pre>iperf unknown error</pre></body></html>\n")
+			return
+		}
 
-			if strings.Contains(line, "CLIENT DISABLED") {
-				fmt.Fprint(c.Writer, "<html><head><title>SERVER DISABLED</title></head><body><pre>iperf server is disabled</pre></body></html>\n")
-				return
-			} else if strings.Contains(line, "BUSY") {
-				fmt.Fprint(c.Writer, "<html><head><title>SERVER BUSY</title></head><body><pre>iperf server is busy</pre></body></html>\n")
-				return
-			} else if strings.Contains(line, "ERROR") {
-				fmt.Fprint(c.Writer, "<html><head><title>SERVER ERROR</title></head><body><pre>iperf server error</pre></body></html>\n")
-				return
-			} else if strings.Contains(line, "RUNNING") {
-				// Start local client
-				args := []string{"--forceflush", "-b", "0", "-Z", "-c", ip, "-l", "16K"}
-				if protocol == "udp" {
-					args = append(args, "-u")
-				}
-				cmd := exec.Command("/usr/bin/iperf3", args...)
+		switch {
+		case strings.Contains(line, "CLIENT DISABLED"):
+			fmt.Fprint(c.Writer, "<html><head><title>SERVER DISABLED</title></head><body><pre>iperf server is disabled</pre></body></html>\n")
+			return
+		case strings.Contains(line, "BUSY"):
+			fmt.Fprint(c.Writer, "<html><head><title>SERVER BUSY</title></head><body><pre>iperf server is busy</pre></body></html>\n")
+			return
+		case strings.Contains(line, "ERROR"):
+			fmt.Fprint(c.Writer, "<html><head><title>SERVER ERROR</title></head><body><pre>iperf server error</pre></body></html>\n")
+			return
+		case strings.Contains(line, "RUNNING"):
+			// Start local client
+			args := []string{"--forceflush", "-b", "0", "-Z", "-c", ip, "-l", "16K"}
+			if protocol == "udp" {
+				args = append(args, "-u")
+			}
+			cmd := exec.CommandContext(c.Request.Context(), "/usr/bin/iperf3", args...)
 
-				// Capture stdout and stderr
-				pr, pw, _ := os.Pipe()
-				cmd.Stdout = pw
-				cmd.Stderr = pw
+			// Capture stdout and stderr
+			pr, pw, _ := os.Pipe()
+			cmd.Stdout = pw
+			cmd.Stderr = pw
 
-				if err := cmd.Start(); err != nil {
-					fmt.Fprint(c.Writer, "<html><head><title>CLIENT ERROR</title></head><body><pre>iperf client failed</pre></body></html>\n")
-					return
-				}
-				pw.Close() // Close write end in parent
-
-				fmt.Fprint(c.Writer, "<html><head><title>SUCCESS</title></head>")
-
-				di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
-				nodeName := "Unknown"
-				if ok {
-					nodeName = di.Config.ServerName
-				}
-
-				fmt.Fprintf(c.Writer, "<body><pre>Client: %s\nServer: %s\n", nodeName, server)
-				c.Writer.Flush()
-
-				// Stream output
-				scanner := bufio.NewScanner(pr)
-				for scanner.Scan() {
-					fmt.Fprintln(c.Writer, scanner.Text())
-					c.Writer.Flush()
-				}
-
-				cmd.Wait()
-				fmt.Fprint(c.Writer, "</pre></body></html>\n")
+			if err := cmd.Start(); err != nil {
+				fmt.Fprint(c.Writer, "<html><head><title>CLIENT ERROR</title></head><body><pre>iperf client failed</pre></body></html>\n")
 				return
 			}
+			pw.Close() // Close write end in parent
+
+			fmt.Fprint(c.Writer, "<html><head><title>SUCCESS</title></head>")
+
+			di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
+			nodeName := "Unknown"
+			if ok {
+				nodeName = di.Config.ServerName
+			}
+
+			fmt.Fprintf(c.Writer, "<body><pre>Client: %s\nServer: %s\n", nodeName, server)
+			c.Writer.Flush()
+
+			// Stream output
+			scanner := bufio.NewScanner(pr)
+			for scanner.Scan() {
+				fmt.Fprintln(c.Writer, scanner.Text())
+				c.Writer.Flush()
+			}
+
+			if err := cmd.Wait(); err != nil {
+				slog.Error("error waiting for iperf client process", "error", err)
+			}
+			fmt.Fprint(c.Writer, "</pre></body></html>\n")
 		}
 	}
 }
@@ -342,9 +367,9 @@ func GETSysinfo(c *gin.Context) {
 			FirmwareVersion:      di.Version,
 		},
 		Tunnels: apimodels.Tunnels{
-			ActiveTunnelCount: activeTunnels,
+			ActiveTunnelCount:    activeTunnels,
 			WireguardTunnelCount: wgTunnels,
-			LegacyTunnelCount: legacyTunnels,
+			LegacyTunnelCount:    legacyTunnels,
 		},
 		LQM: apimodels.LQM{
 			Enabled: di.Config.LQM.Enabled,
@@ -357,7 +382,7 @@ func GETSysinfo(c *gin.Context) {
 	}
 
 	if doServices {
-		sysinfo.Services = getServices(di.OLSRServicesParser)
+		sysinfo.Services = getServices(c.Request.Context(), di.OLSRServicesParser)
 	}
 
 	if doLinkInfo {
@@ -472,8 +497,9 @@ func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 		return nil
 	}
 
+	resolver := &net.Resolver{}
 	for _, link := range links.Links {
-		hosts, err := net.LookupAddr(link.RemoteIP)
+		hosts, err := resolver.LookupAddr(ctx, link.RemoteIP)
 		if err != nil {
 			continue
 		}
@@ -501,7 +527,7 @@ func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 			continue
 		}
 
-		ips, err := net.LookupIP(hostname)
+		ips, err := resolver.LookupIPAddr(ctx, hostname)
 		if err != nil {
 			continue
 		}
@@ -553,7 +579,8 @@ func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 	return ret
 }
 
-func getServices(parser *olsr.ServicesParser) []apimodels.Service {
+func getServices(ctx context.Context, parser *olsr.ServicesParser) []apimodels.Service {
+	resolver := &net.Resolver{}
 	svcs := parser.GetServices()
 	ret := []apimodels.Service{}
 	for _, svc := range svcs {
@@ -563,7 +590,7 @@ func getServices(parser *olsr.ServicesParser) []apimodels.Service {
 			slog.Error("GETSysinfo: Unable to parse URL", "url", svc.URL, "error", err)
 			continue
 		}
-		ips, err := net.LookupIP(url.Hostname())
+		ips, err := resolver.LookupIPAddr(ctx, url.Hostname())
 		if err != nil {
 			continue
 		}
@@ -603,7 +630,7 @@ func getLQMInfo() *apimodels.LQMInfo {
 	trackers := make(map[string]apimodels.LQMTracker)
 	for mac, data := range lqmData.Trackers {
 		tracker := apimodels.LQMTracker{}
-		
+
 		if hostname, ok := data["hostname"].(string); ok {
 			tracker.Hostname = hostname
 		}
@@ -616,7 +643,7 @@ func getLQMInfo() *apimodels.LQMInfo {
 		if quality, ok := data["quality"].(float64); ok {
 			tracker.Quality = int(quality)
 		}
-		
+
 		trackers[mac] = tracker
 	}
 

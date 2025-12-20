@@ -28,7 +28,6 @@ import (
 )
 
 const defTimeout = 10 * time.Second
-const debugWriteTimeout = 60 * time.Second
 
 type Server struct {
 	config           *config.Config

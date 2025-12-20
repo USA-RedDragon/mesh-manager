@@ -109,7 +109,7 @@ func (h *Host) String() string {
 // Text on a line after a # is ignored
 // Lines with only whitespace or that are empty are ignored
 //
-//nolint:golint,gocyclo
+//nolint:gocyclo
 func parseHosts() (ret []*Host, count int, totalCount int, err error) {
 	hostsFile, err := os.ReadFile(hostsFile)
 	if err != nil {

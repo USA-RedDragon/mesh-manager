@@ -1,6 +1,7 @@
 package babel
 
 import (
+	"context"
 	"fmt"
 	"net"
 )
@@ -9,8 +10,9 @@ const (
 	socketPath = "/var/run/babel.sock"
 )
 
-func (s *Service) AddTunnel(iface string) error {
-	conn, err := net.Dial("unix", socketPath)
+func (s *Service) AddTunnel(ctx context.Context, iface string) error {
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "unix", socketPath)
 	if err != nil {
 		return fmt.Errorf("failed to connect to socket: %w", err)
 	}
@@ -28,8 +30,9 @@ func (s *Service) AddTunnel(iface string) error {
 	return nil
 }
 
-func (s *Service) RemoveTunnel(iface string) error {
-	conn, err := net.Dial("unix", socketPath)
+func (s *Service) RemoveTunnel(ctx context.Context, iface string) error {
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "unix", socketPath)
 	if err != nil {
 		return fmt.Errorf("failed to connect to socket: %w", err)
 	}

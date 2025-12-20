@@ -505,7 +505,7 @@ func POSTTunnel(c *gin.Context) {
 				return
 			}
 
-			err = babelService.AddTunnel(wireguard.GenerateWireguardInterfaceName(tunnel))
+			err = babelService.AddTunnel(c.Request.Context(), wireguard.GenerateWireguardInterfaceName(tunnel))
 			if err != nil {
 				slog.Error("POSTTunnel: Error adding Babel tunnel", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error adding Babel tunnel"})
@@ -804,7 +804,7 @@ func DELETETunnel(c *gin.Context) {
 			return
 		}
 
-		err = babelService.RemoveTunnel(wireguard.GenerateWireguardInterfaceName(tunnel))
+		err = babelService.RemoveTunnel(c.Request.Context(), wireguard.GenerateWireguardInterfaceName(tunnel))
 		if err != nil {
 			slog.Error("DELETETunnel: Error removing Babel tunnel", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error removing Babel tunnel"})

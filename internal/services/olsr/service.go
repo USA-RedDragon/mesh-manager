@@ -1,6 +1,7 @@
 package olsr
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,7 +18,7 @@ type Service struct {
 func NewService(config *config.Config) *Service {
 	return &Service{
 		config:  config,
-		olsrCmd: exec.Command("olsrd", "-f", "/etc/olsrd/olsrd.conf", "-nofork"),
+		olsrCmd: exec.CommandContext(context.Background(), "olsrd", "-f", "/etc/olsrd/olsrd.conf", "-nofork"),
 	}
 }
 
@@ -26,7 +27,7 @@ func (s *Service) Start() error {
 		return s.olsrCmd.Wait()
 	}
 	if s.olsrCmd.ProcessState != nil {
-		s.olsrCmd = exec.Command("olsrd", "-f", "/etc/olsrd/olsrd.conf", "-nofork")
+		s.olsrCmd = exec.CommandContext(context.Background(), "olsrd", "-f", "/etc/olsrd/olsrd.conf", "-nofork")
 	}
 	err := s.olsrCmd.Start()
 	if err != nil {

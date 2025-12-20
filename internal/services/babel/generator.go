@@ -18,7 +18,7 @@ func GenerateAndSave(config *config.Config, db *gorm.DB) error {
 		return fmt.Errorf("failed to generate babel.conf")
 	}
 
-	//nolint:golint,gosec
+	//nolint:gosec
 	return os.WriteFile("/tmp/babel-generated.conf", []byte(conf), 0644)
 }
 

@@ -3,11 +3,12 @@ package lqm
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math"
-	"math/rand"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/USA-RedDragon/mesh-manager/internal/config"
@@ -24,27 +26,27 @@ import (
 )
 
 const (
-	refreshTimeoutBase   = 12 * 60 * time.Second
-	refreshTimeoutRange  = 5 * 60 * time.Second
-	refreshRetryTimeout  = 5 * 60 * time.Second
-	lastSeenTimeout      = 24 * time.Hour
-	txQualityRunAvg      = 0.4
-	pingTimeout          = 1.0 * time.Second
-	pingTimeRunAvg       = 0.4
-	dtdDistance          = 50 // meters
-	connectTimeout       = 5 * time.Second
-	defaultMaxDistance   = 80550 // meters
-	pingPenalty          = 5
-	lastUpMargin         = 60 * time.Second
-	babelSocketPath      = "/var/run/babel.sock"
-	lqmInfoPath          = "/tmp/lqm.info"
+	refreshTimeoutBase  = 12 * 60 * time.Second
+	refreshTimeoutRange = 5 * 60 * time.Second
+	refreshRetryTimeout = 5 * 60 * time.Second
+	lastSeenTimeout     = 24 * time.Hour
+	txQualityRunAvg     = 0.4
+	pingTimeout         = 1.0 * time.Second
+	pingTimeRunAvg      = 0.4
+	dtdDistance         = 50 // meters
+	connectTimeout      = 5 * time.Second
+	defaultMaxDistance  = 80550 // meters
+	pingPenalty         = 5
+	lastUpMargin        = 60 * time.Second
+	babelSocketPath     = "/var/run/babel.sock"
+	lqmInfoPath         = "/tmp/lqm.info"
 )
 
 type Tracker struct {
 	FirstSeen          time.Time    `json:"-"`
 	LastSeen           time.Time    `json:"-"`
 	LastUp             time.Time    `json:"-"`
-	Type               string       `json:"type"`
+	Type               DeviceType   `json:"type"`
 	Device             string       `json:"device"`
 	MAC                string       `json:"mac"`
 	IPv6LL             string       `json:"ipv6ll"`
@@ -109,7 +111,7 @@ type SysinfoNodeDetails struct {
 
 type SysinfoInterface struct {
 	Mac string `json:"mac"`
-	Ip  string `json:"ip"`
+	IP  string `json:"ip"`
 }
 
 type SysinfoLqm struct {
@@ -127,11 +129,17 @@ type SysinfoTracker struct {
 	Quality         int     `json:"quality"`
 }
 
+type DeviceType string
+
+const (
+	DeviceTypeDtD       DeviceType = "DtD"
+	DeviceTypeWireguard DeviceType = "Wireguard"
+)
+
 type Service struct {
 	config              *config.Config
 	trackers            map[string]*Tracker
 	mu                  sync.RWMutex
-	ctx                 context.Context
 	cancel              context.CancelFunc
 	wg                  sync.WaitGroup
 	lastTick            time.Time
@@ -143,6 +151,7 @@ type Service struct {
 	httpClient          *http.Client
 	startStopMu         sync.Mutex
 	stopping            bool
+	running             atomic.Bool
 }
 
 func NewService(config *config.Config) *Service {
@@ -175,14 +184,16 @@ func (s *Service) Start() error {
 		return nil
 	}
 
-	s.ctx, s.cancel = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancel = cancel
 	s.startTime = time.Now()
 	s.wg.Add(1)
+	s.running.Store(true)
 	s.startStopMu.Unlock()
 
 	// Run synchronously so that the service registry doesn't spin in a tight loop restarting us.
 	// The registry expects Start() to block until the service exits.
-	s.run()
+	s.run(ctx)
 
 	return nil
 }
@@ -196,6 +207,7 @@ func (s *Service) Stop() error {
 	s.startStopMu.Unlock()
 
 	s.wg.Wait()
+	s.running.Store(false)
 	return nil
 }
 
@@ -204,40 +216,43 @@ func (s *Service) Reload() error {
 }
 
 func (s *Service) IsRunning() bool {
-	return s.ctx != nil && s.ctx.Err() == nil
+	return s.running.Load()
 }
 
 func (s *Service) IsEnabled() bool {
 	return s.config.LQM.Enabled
 }
 
-func (s *Service) run() {
-	defer s.wg.Done()
+func (s *Service) run(ctx context.Context) {
+	defer func() {
+		s.running.Store(false)
+		s.wg.Done()
+	}()
 
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	// Initial run
-	s.tick()
+	s.tick(ctx)
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			s.tick()
+			s.tick(ctx)
 		}
 	}
 }
 
-func (s *Service) tick() {
+func (s *Service) tick(ctx context.Context) {
 	now := time.Now()
-	s.updateNeighbors()
-	s.updateRoutes()
+	s.updateNeighbors(ctx)
+	s.updateRoutes(ctx)
 	s.updateStats()
 	s.updateRunningAverages()
-	s.remoteRefresh()
-	s.updateTrackingState()
+	s.remoteRefresh(ctx)
+	s.updateTrackingState(ctx)
 	s.pruneTrackers(now)
 	s.writeState()
 	s.lastTick = now
@@ -254,9 +269,10 @@ func (s *Service) pruneTrackers(now time.Time) {
 	}
 }
 
-func (s *Service) updateNeighbors() {
+func (s *Service) updateNeighbors(ctx context.Context) {
 	slog.Info("LQM: updateNeighbors started")
-	conn, err := net.Dial("unix", babelSocketPath)
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "unix", babelSocketPath)
 	if err != nil {
 		slog.Warn("LQM: Failed to connect to babel socket", "error", err)
 		return
@@ -321,16 +337,14 @@ func (s *Service) updateNeighbors() {
 					IPv6LL:    ipv6ll,
 				}
 				// Derive Wireguard peer IP immediately
-				if devType == "Wireguard" {
+				if devType == DeviceTypeWireguard {
 					tracker.IP = deriveWireguardPeerIP(iface)
 				}
 				s.trackers[mac] = tracker
-			} else {
+			} else if tracker.Type == DeviceTypeWireguard {
 				// Always re-derive Wireguard peer IPs to ensure they're current
-				if tracker.Type == "Wireguard" {
-					tracker.IP = deriveWireguardPeerIP(iface)
-					slog.Debug("LQM: Updated IP for existing Wireguard tracker", "mac", mac, "device", iface, "ip", tracker.IP)
-				}
+				tracker.IP = deriveWireguardPeerIP(iface)
+				slog.Debug("LQM: Updated IP for existing Wireguard tracker", "mac", mac, "device", iface, "ip", tracker.IP)
 			}
 
 			tracker.LastSeen = now
@@ -344,7 +358,7 @@ func (s *Service) updateNeighbors() {
 				rxcost := 96
 				helloInterval := 4000 // Default 4s
 
-				if devType == "Wireguard" {
+				if devType == DeviceTypeWireguard {
 					rxcost = 206
 					helloInterval = 10000 // 10s
 				}
@@ -381,7 +395,7 @@ func (s *Service) updateStats() {
 	for _, link := range links {
 		attrs := link.Attrs()
 		devType := deviceToType(attrs.Name)
-		if devType == "Wireguard" || devType == "DtD" {
+		if devType == DeviceTypeWireguard || devType == DeviceTypeDtD {
 			for _, tracker := range s.trackers {
 				if tracker.Device == attrs.Name {
 					stats := attrs.Statistics
@@ -450,7 +464,7 @@ func (s *Service) updateRunningAverages() {
 	}
 }
 
-func (s *Service) remoteRefresh() {
+func (s *Service) remoteRefresh(ctx context.Context) {
 	s.mu.Lock()
 	trackersToRefresh := make([]*Tracker, 0)
 	now := time.Now()
@@ -469,23 +483,30 @@ func (s *Service) remoteRefresh() {
 		tracker := t
 		// We don't wait for these to finish, but we limit concurrency
 		go func() {
-			if err := s.httpSem.Acquire(s.ctx, 1); err != nil {
+			if err := s.httpSem.Acquire(ctx, 1); err != nil {
 				return
 			}
 			defer s.httpSem.Release(1)
-			s.refreshTracker(tracker)
+			if err := s.refreshTracker(ctx, tracker); err != nil {
+				slog.Warn("LQM: Failed to refresh tracker", "mac", tracker.MAC, "error", err)
+			}
 		}()
 	}
 }
 
-func (s *Service) refreshTracker(t *Tracker) error {
+func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 	if t.IPv6LL == "" {
 		return nil
 	}
 
 	url := fmt.Sprintf("http://[%s%%%s]:8080/cgi-bin/sysinfo.json?lqm=1", t.IPv6LL, t.Device)
 
-	resp, err := s.httpClient.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		// Refresh time was already set to retry timeout in remoteRefresh,
 		// but we reset stats here.
@@ -508,13 +529,18 @@ func (s *Service) refreshTracker(t *Tracker) error {
 	defer s.mu.Unlock()
 
 	// Update refresh time on success
-	jitter := time.Duration(rand.Int63n(int64(refreshTimeoutRange)))
+	jitter := refreshTimeoutRange / 2
+	if m := big.NewInt(int64(refreshTimeoutRange)); m.Sign() > 0 {
+		if n, err := rand.Int(rand.Reader, m); err == nil {
+			jitter = time.Duration(n.Int64())
+		}
+	}
 	t.Refresh = time.Now().Add(refreshTimeoutBase + jitter)
 	t.RevLastSeen = time.Now()
 
 	t.Hostname = canonicalHostname(info.Node)
 
-	if t.Type == "Wireguard" {
+	if t.Type == DeviceTypeWireguard {
 		// Ensure IP is set for Wireguard
 		if t.IP == "" {
 			t.IP = deriveWireguardPeerIP(t.Device)
@@ -522,7 +548,7 @@ func (s *Service) refreshTracker(t *Tracker) error {
 	} else {
 		for _, iface := range info.Interfaces {
 			if strings.EqualFold(iface.Mac, t.MAC) {
-				t.IP = iface.Ip
+				t.IP = iface.IP
 				break
 			}
 		}
@@ -540,7 +566,7 @@ func (s *Service) refreshTracker(t *Tracker) error {
 		lon1, err2 := strconv.ParseFloat(s.config.Longitude, 64)
 		if err1 == nil && err2 == nil && t.Lat != 0 && t.Lon != 0 {
 			t.Distance = calcDistance(lat1, lon1, t.Lat, t.Lon)
-			if t.Type == "DtD" && t.Distance < dtdDistance {
+			if t.Type == DeviceTypeDtD && t.Distance < dtdDistance {
 				t.LocalArea = true
 			} else {
 				t.LocalArea = false
@@ -567,7 +593,7 @@ func (s *Service) refreshTracker(t *Tracker) error {
 	return nil
 }
 
-func (s *Service) updateTrackingState() {
+func (s *Service) updateTrackingState(ctx context.Context) {
 	slog.Info("LQM: updateTrackingState started")
 	s.mu.Lock()
 	trackers := make([]*Tracker, 0, len(s.trackers))
@@ -579,14 +605,14 @@ func (s *Service) updateTrackingState() {
 	var wg sync.WaitGroup
 	for _, t := range trackers {
 		// Acquire semaphore BEFORE spawning goroutine to control memory usage
-		if err := s.pingSem.Acquire(s.ctx, 1); err != nil {
+		if err := s.pingSem.Acquire(ctx, 1); err != nil {
 			break
 		}
 		wg.Add(1)
 		go func(tracker *Tracker) {
 			defer s.pingSem.Release(1)
 			defer wg.Done()
-			s.pingTracker(tracker)
+			s.pingTracker(ctx, tracker)
 			s.calculateQuality(tracker)
 		}(t)
 	}
@@ -594,14 +620,14 @@ func (s *Service) updateTrackingState() {
 	slog.Info("LQM: updateTrackingState finished")
 }
 
-func (s *Service) pingTracker(t *Tracker) {
+func (s *Service) pingTracker(ctx context.Context, t *Tracker) {
 	if t.IPv6LL == "" {
 		return
 	}
 
 	timeoutSec := strconv.Itoa(int(pingTimeout.Seconds()))
 	// Use CommandContext to respect cancellation
-	cmd := exec.CommandContext(s.ctx, "ping6", "-c", "1", "-W", timeoutSec, "-I", t.Device, t.IPv6LL)
+	cmd := exec.CommandContext(ctx, "ping6", "-c", "1", "-W", timeoutSec, "-I", t.Device, t.IPv6LL)
 	output, err := cmd.Output()
 
 	s.mu.Lock()
@@ -624,7 +650,7 @@ func (s *Service) pingTracker(t *Tracker) {
 	if t.PingQuality == 0 {
 		t.PingQuality = 100
 	} else {
-		t.PingQuality += 1
+		t.PingQuality++
 	}
 
 	if !success {
@@ -651,15 +677,16 @@ func (s *Service) calculateQuality(t *Tracker) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if t.TxQuality > 0 {
+	switch {
+	case t.TxQuality > 0:
 		if t.PingQuality > 0 {
 			t.Quality = int(math.Round((t.TxQuality + t.PingQuality) / 2))
 		} else {
 			t.Quality = int(math.Round(t.TxQuality))
 		}
-	} else if t.PingQuality > 0 {
+	case t.PingQuality > 0:
 		t.Quality = int(math.Round(t.PingQuality))
-	} else {
+	default:
 		t.Quality = 0
 	}
 }
@@ -728,13 +755,13 @@ func (s *Service) writeState() {
 	}
 
 	state := map[string]interface{}{
-		"now":                     nowSecs,
-		"trackers":                jsonTrackers,
-		"distance":                defaultMaxDistance,
-		"hidden_nodes":            []string{},
-		"total_node_route_count":  s.totalNodeRouteCount,
-		"coverage":                0,
-		"babel":                   true,
+		"now":                    nowSecs,
+		"trackers":               jsonTrackers,
+		"distance":               defaultMaxDistance,
+		"hidden_nodes":           []string{},
+		"total_node_route_count": s.totalNodeRouteCount,
+		"coverage":               0,
+		"babel":                  true,
 	}
 
 	file, err := os.Create(lqmInfoPath)
@@ -744,7 +771,9 @@ func (s *Service) writeState() {
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
-	encoder.Encode(state)
+	if err := encoder.Encode(state); err != nil {
+		slog.Warn("LQM: Failed to encode state", "error", err)
+	}
 }
 
 func ipv6llToMac(ipv6ll string) string {
@@ -757,25 +786,27 @@ func ipv6llToMac(ipv6ll string) string {
 	}
 
 	if ip[11] == 0xff && ip[12] == 0xfe {
-		mac := make([]byte, 6)
-		mac[0] = ip[8] ^ 0x02
-		mac[1] = ip[9]
-		mac[2] = ip[10]
-		mac[3] = ip[13]
-		mac[4] = ip[14]
-		mac[5] = ip[15]
+		mac := make([]byte, 0, 6)
+		mac = append(mac,
+			ip[8]^0x02,
+			ip[9],
+			ip[10],
+			ip[13],
+			ip[14],
+			ip[15],
+		)
 		return net.HardwareAddr(mac).String()
 	}
 
 	return ipv6ll
 }
 
-func deviceToType(device string) string {
+func deviceToType(device string) DeviceType {
 	if device == "br-dtdlink" {
-		return "DtD"
+		return DeviceTypeDtD
 	}
 	if strings.HasPrefix(device, "wg") {
-		return "Wireguard"
+		return DeviceTypeWireguard
 	}
 	return ""
 }
@@ -804,16 +835,17 @@ func canonicalHostname(hostname string) string {
 }
 
 func calcDistance(lat1, lon1, lat2, lon2 float64) float64 {
-	const r2 = 12742000               // diameter earth (meters)
+	const r2 = 12742000 // diameter earth (meters)
 	const p = math.Pi / 180
 
 	v := 0.5 - math.Cos((lat2-lat1)*p)/2 + math.Cos(lat1*p)*math.Cos(lat2*p)*(1-math.Cos((lon2-lon1)*p))/2
 	return float64(r2) * math.Atan2(math.Sqrt(v), math.Sqrt(1-v))
 }
 
-func (s *Service) updateRoutes() {
+func (s *Service) updateRoutes(ctx context.Context) {
 	slog.Info("LQM: updateRoutes started")
-	conn, err := net.Dial("unix", babelSocketPath)
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "unix", babelSocketPath)
 	if err != nil {
 		slog.Error("LQM: Failed to connect to babel socket for routes", "error", err)
 		return
@@ -821,7 +853,10 @@ func (s *Service) updateRoutes() {
 	defer conn.Close()
 
 	// Set deadline to prevent hanging
-	conn.SetDeadline(time.Now().Add(5 * time.Second))
+	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		slog.Error("LQM: Failed to set deadline on babel socket", "error", err)
+		return
+	}
 
 	scanner := bufio.NewScanner(conn)
 
@@ -933,17 +968,17 @@ func deriveWireguardPeerIP(device string) string {
 			if len(addrs) == 0 {
 				return ""
 			}
-			
+
 			// Get the IPv4 address and ensure it's in 4-byte format
 			ip := addrs[0].IP.To4()
 			if ip == nil {
 				return ""
 			}
-			
+
 			// Make a copy of the IP to avoid modifying the original
 			peerIP := make(net.IP, len(ip))
 			copy(peerIP, ip)
-			
+
 			if strings.HasPrefix(device, "wgs") {
 				// Server interface: peer is IP + 1
 				peerIP[3]++

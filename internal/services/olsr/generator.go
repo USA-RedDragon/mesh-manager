@@ -129,7 +129,7 @@ func GenerateAndSave(config *config.Config, db *gorm.DB) error {
 		return fmt.Errorf("failed to generate olsrd.conf")
 	}
 
-	//nolint:golint,gosec
+	//nolint:gosec
 	return os.WriteFile("/etc/olsrd/olsrd.conf", []byte(conf), 0644)
 }
 
