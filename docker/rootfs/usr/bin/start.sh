@@ -77,6 +77,8 @@ ip rule add pref 140 lookup 27
 ip rule add pref 150 lookup 28
 ip rule add pref 160 lookup 22
 
+iptables -I FORWARD 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -I INPUT 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -t nat -A POSTROUTING -o wg+ ! -d 255.255.255.255 -m addrtype --src-type LOCAL -j SNAT --to-source $NODE_IP
 
 mkdir -p /etc/meshlink
