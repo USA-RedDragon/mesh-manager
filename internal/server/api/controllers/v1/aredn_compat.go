@@ -512,8 +512,12 @@ func getHosts(olsrParser *olsr.HostsParser, meshlinkParser *meshlink.Parser, mod
 func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 	ret := make(map[string]apimodels.LinkInfo)
 	switch trackers := getLQMInfo().Trackers.(type) {
-	case map[string]lqm.Tracker:
+	case map[string]interface{}:
 		for _, tracker := range trackers {
+			tracker, ok := tracker.(lqm.Tracker)
+			if !ok {
+				continue
+			}
 			ip := tracker.IP
 			if ip == "" && tracker.CanonicalIP != "" {
 				ip = tracker.CanonicalIP
