@@ -607,12 +607,29 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 	myHostname := canonicalHostname(s.config.ServerName)
 	if info.Lqm.Info.Trackers != nil {
 		switch trackers := info.Lqm.Info.Trackers.(type) {
-		case map[string]Tracker:
-			for _, rtrack := range trackers {
-				if myHostname == canonicalHostname(rtrack.Hostname) {
-					t.RevPingSuccessTime = rtrack.PingSuccessTime
-					t.RevPingQuality = rtrack.PingQuality
-					t.RevQuality = rtrack.Quality
+		case map[string]any:
+			// JSON unmarshals into map[string]interface{} when the field is typed as `any`
+			for _, v := range trackers {
+				trackerMap, ok := v.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				
+				hostname := ""
+				if hostnameVal, ok := trackerMap["hostname"].(string); ok {
+					hostname = hostnameVal
+				}
+				
+				if myHostname == canonicalHostname(hostname) {
+					if pingSuccessTime, ok := trackerMap["ping_success_time"].(float64); ok {
+						t.RevPingSuccessTime = pingSuccessTime
+					}
+					if pingQuality, ok := trackerMap["ping_quality"].(float64); ok {
+						t.RevPingQuality = int(pingQuality)
+					}
+					if quality, ok := trackerMap["quality"].(float64); ok {
+						t.RevQuality = int(quality)
+					}
 					break
 				}
 			}
