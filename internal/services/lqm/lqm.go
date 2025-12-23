@@ -589,11 +589,9 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 		}
 	}
 
-	if s.config.Latitude != "" && s.config.Longitude != "" {
-		lat1, err1 := strconv.ParseFloat(s.config.Latitude, 64)
-		lon1, err2 := strconv.ParseFloat(s.config.Longitude, 64)
-		if err1 == nil && err2 == nil && t.Lat != 0 && t.Lon != 0 {
-			t.Distance = calcDistance(lat1, lon1, t.Lat, t.Lon)
+	if s.config.Latitude != 0 && s.config.Longitude != 0 {
+		if t.Lat != 0 && t.Lon != 0 {
+			t.Distance = calcDistance(s.config.Latitude, s.config.Longitude, t.Lat, t.Lon)
 			if t.Type == DeviceTypeDtD && t.Distance < dtdDistance {
 				t.LocalArea = true
 			} else {
