@@ -98,7 +98,7 @@ type Tracker struct {
 	LocalArea          bool         `json:"localarea"`
 	Model              string       `json:"model"`
 	FirmwareVersion    string       `json:"firmware_version"`
-	RevLastSeen        int          `json:"-"`
+	RevLastSeen        int          `json:"rev_lastseen"`
 	RevPingSuccessTime float64      `json:"rev_ping_success_time"`
 	RevPingQuality     int          `json:"rev_ping_quality"`
 	RevQuality         int          `json:"rev_quality"`
