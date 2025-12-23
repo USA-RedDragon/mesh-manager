@@ -118,7 +118,7 @@ type BabelConfig struct {
 
 type LQM struct {
 	Enabled bool    `json:"enabled"`
-	Info    LQMInfo `json:"info"`
+	Info    LQMInfo `json:"info,omitempty"`
 }
 
 type LQMInfo struct {

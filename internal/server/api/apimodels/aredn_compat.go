@@ -66,13 +66,13 @@ type SysinfoResponse struct {
 	MeshRF        MeshRF              `json:"meshrf"`
 	Gridsquare    string              `json:"grid_square"`
 	Node          string              `json:"node"`
-	Nodes         []Host              `json:"nodes"`
+	Nodes         []Host              `json:"nodes,omitempty"`
 	NodeDetails   NodeDetails         `json:"node_details"`
 	Tunnels       Tunnels             `json:"tunnels"`
-	LQM           lqm.LQM             `json:"lqm"`
+	LQM           lqm.LQM             `json:"lqm,omitempty"`
 	Interfaces    []Interface         `json:"interfaces"`
-	Hosts         []Host              `json:"hosts"`
-	Services      []Service           `json:"services"`
-	ServicesLocal []Service           `json:"services_local"`
-	LinkInfo      map[string]LinkInfo `json:"link_info"`
+	Hosts         []Host              `json:"hosts,omitempty"`
+	Services      []Service           `json:"services,omitempty"`
+	ServicesLocal []Service           `json:"services_local,omitempty"`
+	LinkInfo      map[string]LinkInfo `json:"link_info,omitempty"`
 }
