@@ -295,20 +295,6 @@ func GETSysinfo(c *gin.Context) {
 		return
 	}
 
-	wgTunnels, err := models.CountWireguardTunnels(di.DB)
-	if err != nil {
-		slog.Error("GETSysinfo: Unable to get wireguard tunnels", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
-		return
-	}
-
-	legacyTunnels, err := models.CountLegacyTunnels(di.DB)
-	if err != nil {
-		slog.Error("GETSysinfo: Unable to get legacy tunnels", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
-		return
-	}
-
 	var info syscall.Sysinfo_t
 	err = syscall.Sysinfo(&info)
 	if err != nil {
@@ -323,11 +309,23 @@ func GETSysinfo(c *gin.Context) {
 	}
 	doHosts := hostsStr == "1"
 
+	nodesStr, exists := c.GetQuery("nodes")
+	if !exists {
+		nodesStr = "0"
+	}
+	doNodes := nodesStr == "1"
+
 	servicesStr, exists := c.GetQuery("services")
 	if !exists {
 		servicesStr = "0"
 	}
 	doServices := servicesStr == "1"
+
+	servicesStr, exists = c.GetQuery("services_local")
+	if !exists {
+		servicesStr = "0"
+	}
+	doLocalServices := servicesStr == "1"
 
 	linkInfoStr, exists := c.GetQuery("link_info")
 	if !exists {
@@ -351,8 +349,9 @@ func GETSysinfo(c *gin.Context) {
 				float64(info.Loads[1]) / float64(1<<16),
 				float64(info.Loads[2]) / float64(1<<16),
 			},
+			FreeMemory: uint64(info.Freeram) * uint64(info.Unit),
 		},
-		APIVersion: "1.14",
+		APIVersion: "2.0",
 		MeshRF: apimodels.MeshRF{
 			Status: "off",
 		},
@@ -362,15 +361,13 @@ func GETSysinfo(c *gin.Context) {
 			MeshSupernode:        di.Config.Supernode,
 			Description:          "Cloud Tunnel",
 			Model:                "Virtual",
-			MeshGateway:          "1",
+			MeshGateway:          true,
 			BoardID:              "0x0000",
 			FirmwareManufacturer: "github.com/USA-RedDragon/mesh-manager",
 			FirmwareVersion:      di.Version,
 		},
 		Tunnels: apimodels.Tunnels{
-			ActiveTunnelCount:    activeTunnels,
-			WireguardTunnelCount: wgTunnels,
-			LegacyTunnelCount:    legacyTunnels,
+			ActiveTunnelCount: activeTunnels,
 		},
 		LQM: lqm.LQM{
 			Enabled: di.Config.LQM.Enabled,
@@ -379,11 +376,19 @@ func GETSysinfo(c *gin.Context) {
 	}
 
 	if doHosts {
-		sysinfo.Hosts = getHosts(di.OLSRHostsParser, di.MeshLinkParser)
+		sysinfo.Hosts = getHosts(di.OLSRHostsParser, di.MeshLinkParser, modeHosts)
 	}
 
 	if doServices {
-		sysinfo.Services = getServices(c.Request.Context(), di.OLSRServicesParser)
+		sysinfo.Services = getServices(c.Request.Context(), di.OLSRServicesParser, di.MeshLinkParser, modeServices)
+	}
+
+	if doLocalServices {
+		sysinfo.ServicesLocal = getServices(c.Request.Context(), di.OLSRServicesParser, di.MeshLinkParser, modeLocalServices)
+	}
+
+	if doNodes {
+		sysinfo.Nodes = getHosts(di.OLSRHostsParser, di.MeshLinkParser, modeNodes)
 	}
 
 	if doLinkInfo {
@@ -439,35 +444,57 @@ var (
 	regexDtd = regexp.MustCompile(`^dtdlink\..*`)
 )
 
-func getHosts(olsrParser *olsr.HostsParser, meshlinkParser *meshlink.Parser) []apimodels.Host {
-	hosts := olsrParser.GetHosts()
+type hostMode int
+
+const (
+	modeHosts hostMode = iota
+	modeNodes
+)
+
+func getHosts(olsrParser *olsr.HostsParser, meshlinkParser *meshlink.Parser, mode hostMode) []apimodels.Host {
+	olsrHosts := olsrParser.GetHosts()
 	meshlinkHosts := meshlinkParser.GetHosts()
-	hostsMap := make(map[string]net.IP)
-	ret := []apimodels.Host{}
-	for _, host := range hosts {
-		if regexMid.Match([]byte(host.Hostname)) {
-			continue
+
+	result := make(map[string]apimodels.Host)
+
+	process := func(hostname string, ip net.IP) {
+		if regexMid.MatchString(hostname) {
+			return
+		}
+		if regexDtd.MatchString(hostname) {
+			return
 		}
 
-		if regexDtd.Match([]byte(host.Hostname)) {
-			continue
+		var key string
+		switch mode {
+		case modeHosts:
+			key = hostname
+		case modeNodes:
+			key = ip.String()
 		}
 
-		hostsMap[host.Hostname] = host.IP
+		existing, exists := result[key]
+		if !exists {
+			result[key] = apimodels.Host{Name: hostname, IP: ip.String()}
+			return
+		}
+
+		// Node mode: prefer simpler (shorter) hostname
+		if mode == modeNodes && len(hostname) < len(existing.Name) {
+			result[key] = apimodels.Host{Name: hostname, IP: ip.String()}
+		}
 	}
-	for _, host := range meshlinkHosts {
-		if regexDtd.Match([]byte(host.Hostname)) {
-			continue
-		}
 
-		hostsMap[host.Hostname] = host.IP
+	for _, h := range olsrHosts {
+		process(h.Hostname, h.IP)
+	}
+	for _, h := range meshlinkHosts {
+		process(h.Hostname, h.IP)
 	}
 
-	for hostname, ip := range hostsMap {
-		ret = append(ret, apimodels.Host{
-			Name: hostname,
-			IP:   ip.String(),
-		})
+	ret := make([]apimodels.Host, 0, len(result))
+	for _, e := range result {
+		ret = append(ret, e)
 	}
 
 	return ret
@@ -475,140 +502,104 @@ func getHosts(olsrParser *olsr.HostsParser, meshlinkParser *meshlink.Parser) []a
 
 func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 	ret := make(map[string]apimodels.LinkInfo)
-	client := http.Client{
-		Timeout: 5 * time.Second,
-	}
-	// http request http://localhost:9090/links
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost:9090/links", nil)
-	if err != nil {
-		slog.Error("GETSysinfo: Unable to create request", "error", err)
-		return nil
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.Error("GETSysinfo: Unable to get links", "error", err)
-		return nil
-	}
-	defer resp.Body.Close()
-	// Grab the body as json
-	var links apimodels.OlsrdLinks
-	err = json.NewDecoder(resp.Body).Decode(&links)
-	if err != nil {
-		slog.Error("GETSysinfo: Unable to decode links", "error", err)
-		return nil
-	}
-
-	resolver := &net.Resolver{}
-	for _, link := range links.Links {
-		hosts, err := resolver.LookupAddr(ctx, link.RemoteIP)
-		if err != nil {
-			continue
-		}
-
-		var hostname string
-		if len(hosts) > 0 {
-			hostname = hosts[0]
-			// Strip off mid\d. from the hostname if it exists
-			regex := regexp.MustCompile(`^[mM][iI][dD]\d+\.(.+)`)
-			matches := regex.FindStringSubmatch(hostname)
-			if len(matches) == 2 {
-				hostname = matches[1]
+	switch trackers := getLQMInfo().Trackers.(type) {
+	case map[string]lqm.Tracker:
+		for _, tracker := range trackers {
+			ip := tracker.IP
+			if ip == "" && tracker.CanonicalIP != "" {
+				ip = tracker.CanonicalIP
 			}
-			// Strip off dtdlink. from the hostname if it exists
-			regex = regexp.MustCompile(`^[dD][tT][dD][lL][iI][nN][kK]\.(.+)`)
-			matches = regex.FindStringSubmatch(hostname)
-			if len(matches) == 2 {
-				hostname = matches[1]
+			ret[ip] = apimodels.LinkInfo{
+				LinkType:  apimodels.LinkType(strings.ToUpper(string(tracker.Type))),
+				Hostname:  tracker.Hostname,
+				Interface: tracker.Device,
 			}
-			// Make sure the hostname doesn't end with a period
-			hostname = strings.TrimSuffix(hostname, ".")
-			// Make sure the hostname doesn't end with .local.mesh
-			hostname = strings.TrimSuffix(hostname, ".local.mesh")
-		} else {
-			continue
 		}
-
-		ips, err := resolver.LookupIPAddr(ctx, hostname)
-		if err != nil {
-			continue
-		}
-
-		if len(ips) == 0 {
-			continue
-		}
-
-		var linkType string
-		switch {
-		case strings.HasPrefix(link.OLSRInterface, "tun"):
-			linkType = "TUN"
-		case strings.HasPrefix(link.OLSRInterface, "eth"):
-			linkType = "DTD"
-		case strings.HasPrefix(link.OLSRInterface, "wg"):
-			linkType = "WIREGUARD"
-		case strings.HasPrefix(link.OLSRInterface, "br"):
-			linkType = "DTD"
-		default:
-			linkType = "UNKNOWN"
-		}
-
-		ret[ips[0].String()] = apimodels.LinkInfo{
-			HelloTime:           link.HelloTime,
-			LostLinkTime:        link.LostLinkTime,
-			LinkQuality:         link.LinkQuality,
-			VTime:               link.VTime,
-			LinkCost:            link.LinkCost,
-			LinkType:            linkType,
-			Hostname:            hostname,
-			PreviousLinkStatus:  link.PreviousLinkStatus,
-			CurrentLinkStatus:   link.CurrentLinkStatus,
-			NeighborLinkQuality: link.NeighborLinkQuality,
-			SymmetryTime:        link.SymmetryTime,
-			SeqnoValid:          link.SeqnoValid,
-			Pending:             link.Pending,
-			LossHelloInterval:   link.LossHelloInterval,
-			LossMultiplier:      link.LossMultiplier,
-			Hysteresis:          link.Hysteresis,
-			Seqno:               link.Seqno,
-			LossTime:            link.LossTime,
-			ValidityTime:        link.ValidityTime,
-			OLSRInterface:       link.OLSRInterface,
-			LastHelloTime:       link.LastHelloTime,
-			AsymmetryTime:       link.AsymmetryTime,
-		}
+	default:
+		slog.Error("GETSysinfo: Unable to parse LQM trackers")
+		return nil
 	}
-
 	return ret
 }
 
-func getServices(ctx context.Context, parser *olsr.ServicesParser) []apimodels.Service {
-	resolver := &net.Resolver{}
-	svcs := parser.GetServices()
-	ret := []apimodels.Service{}
-	for _, svc := range svcs {
-		// we need to take the hostname from the URL and resolve it to an IP
-		url, err := url.Parse(svc.URL)
+type serviceMode int
+
+const (
+	modeServices serviceMode = iota
+	modeLocalServices
+)
+
+func getServices(ctx context.Context, parser *olsr.ServicesParser, meshlinkParser *meshlink.Parser, mode serviceMode) []apimodels.Service {
+	services := []apimodels.Service{}
+	serviceRegex := regexp.MustCompile(`^([^|]*)\|([^|]*)\|(.*)$`)
+	zeroRegex := regexp.MustCompile(`:0/`)
+
+	switch mode {
+	case modeLocalServices:
+		// LOCALLY HOSTED SERVICES ONLY
+		file, err := os.Open("/etc/meshlink/services")
 		if err != nil {
-			slog.Error("GETSysinfo: Unable to parse URL", "url", svc.URL, "error", err)
-			continue
+			return nil
 		}
-		ips, err := resolver.LookupIPAddr(ctx, url.Hostname())
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			matches := serviceRegex.FindStringSubmatch(line)
+			if matches != nil && len(matches) == 4 {
+				link := matches[1]
+				if zeroRegex.MatchString(link) {
+					link = ""
+				}
+				services = append(services, apimodels.Service{
+					Name:     matches[3],
+					Protocol: matches[2],
+					Link:     link,
+				})
+			}
+		}
+
+	case modeServices:
+		// ALL SERVICES
+		entries, err := os.ReadDir("/var/run/meshlink/services")
 		if err != nil {
-			continue
+			return nil
 		}
-		link := svc.URL
-		// If the link ends with :0/, then it is a non-http link, so set link to ""
-		if strings.HasSuffix(svc.URL, ":0/") {
-			link = ""
+
+		for _, entry := range entries {
+			if entry.Name() == "." || entry.Name() == ".." {
+				continue
+			}
+
+			filePath := "/var/run/meshlink/services/" + entry.Name()
+			file, err := os.Open(filePath)
+			if err != nil {
+				continue
+			}
+
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				line := strings.TrimSpace(scanner.Text())
+				matches := serviceRegex.FindStringSubmatch(line)
+				if matches != nil && len(matches) == 4 {
+					link := matches[1]
+					if zeroRegex.MatchString(link) {
+						link = ""
+					}
+					services = append(services, apimodels.Service{
+						Name:     matches[3],
+						IP:       entry.Name(),
+						Link:     link,
+						Protocol: matches[2],
+					})
+				}
+			}
+			file.Close()
 		}
-		ret = append(ret, apimodels.Service{
-			Name:     svc.Name,
-			IP:       ips[0].String(),
-			Protocol: svc.Protocol,
-			Link:     link,
-		})
 	}
 
-	return ret
+	return services
 }
 
 func getLQMInfo() *lqm.LQMInfo {

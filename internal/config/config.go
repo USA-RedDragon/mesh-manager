@@ -57,8 +57,8 @@ type Config struct {
 	ServerName               string    `name:"server-name" description:"Server name"`
 	Supernode                bool      `name:"supernode" description:"Enable supernode mode"`
 	NodeIP                   string    `name:"node-ip" description:"Node IP address"`
-	Latitude                 string    `name:"latitude" description:"Server latitude"`
-	Longitude                string    `name:"longitude" description:"Server longitude"`
+	Latitude                 float64   `name:"latitude" description:"Server latitude"`
+	Longitude                float64   `name:"longitude" description:"Server longitude"`
 	Gridsquare               string    `name:"gridsquare" description:"Server gridsquare"`
 	Metrics                  Metrics   `name:"metrics" description:"Metrics settings"`
 	Wireguard                Wireguard `name:"wireguard" description:"Wireguard settings"`

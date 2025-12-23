@@ -3,8 +3,9 @@ package apimodels
 import "github.com/USA-RedDragon/mesh-manager/internal/services/lqm"
 
 type Sysinfo struct {
-	Uptime  string     `json:"uptime"`
-	Loadavg [3]float64 `json:"loads"`
+	Uptime     string     `json:"uptime"`
+	Loadavg    [3]float64 `json:"loads"`
+	FreeMemory uint64     `json:"freememory"`
 }
 
 type MeshRF struct {
@@ -15,16 +16,14 @@ type NodeDetails struct {
 	MeshSupernode        bool   `json:"mesh_supernode"`
 	Description          string `json:"description"`
 	Model                string `json:"model"`
-	MeshGateway          string `json:"mesh_gateway"`
+	MeshGateway          bool   `json:"mesh_gateway"`
 	BoardID              string `json:"board_id"`
 	FirmwareManufacturer string `json:"firmware_mfg"`
 	FirmwareVersion      string `json:"firmware_version"`
 }
 
 type Tunnels struct {
-	ActiveTunnelCount    int `json:"active_tunnel_count"`
-	WireguardTunnelCount int `json:"wireguard_tunnel_count"`
-	LegacyTunnelCount    int `json:"legacy_tunnel_count"`
+	ActiveTunnelCount int `json:"active_tunnel_count"`
 }
 
 type Interface struct {
@@ -45,44 +44,35 @@ type Service struct {
 	Link     string `json:"link"`
 }
 
+type LinkType string
+
+const (
+	LinkTypeWireguard LinkType = "WIREGUARD"
+	LinkTypeDTD       LinkType = "DTD"
+	LinkTypeTun       LinkType = "TUN"
+)
+
 type LinkInfo struct {
-	HelloTime           uint64  `json:"helloTime"`
-	LostLinkTime        uint64  `json:"lostLinkTime"`
-	LinkQuality         float32 `json:"linkQuality"`
-	VTime               uint64  `json:"vtime"`
-	LinkCost            float32 `json:"linkCost"`
-	LinkType            string  `json:"linkType"`
-	Hostname            string  `json:"hostname"`
-	PreviousLinkStatus  string  `json:"previousLinkStatus"`
-	CurrentLinkStatus   string  `json:"currentLinkStatus"`
-	NeighborLinkQuality float32 `json:"neighborLinkQuality"`
-	SymmetryTime        uint64  `json:"symmetryTime"`
-	SeqnoValid          bool    `json:"seqnoValid"`
-	Pending             bool    `json:"pending"`
-	LossHelloInterval   uint64  `json:"lossHelloInterval"`
-	LossMultiplier      uint64  `json:"lossMultiplier"`
-	Hysteresis          float32 `json:"hysteresis"`
-	Seqno               uint64  `json:"seqno"`
-	LossTime            uint64  `json:"lossTime"`
-	ValidityTime        uint64  `json:"validityTime"`
-	OLSRInterface       string  `json:"olsrInterface"`
-	LastHelloTime       uint64  `json:"lastHelloTime"`
-	AsymmetryTime       uint64  `json:"asymmetryTime"`
+	Hostname  string   `json:"hostname"`
+	LinkType  LinkType `json:"linkType"`
+	Interface string   `json:"interface"`
 }
 
 type SysinfoResponse struct {
-	Longitude   string              `json:"lon"`
-	Latitude    string              `json:"lat"`
-	Sysinfo     Sysinfo             `json:"sysinfo"`
-	APIVersion  string              `json:"api_version"`
-	MeshRF      MeshRF              `json:"meshrf"`
-	Gridsquare  string              `json:"grid_square"`
-	Node        string              `json:"node"`
-	NodeDetails NodeDetails         `json:"node_details"`
-	Tunnels     Tunnels             `json:"tunnels"`
-	LQM         lqm.LQM             `json:"lqm"`
-	Interfaces  []Interface         `json:"interfaces"`
-	Hosts       []Host              `json:"hosts"`
-	Services    []Service           `json:"services"`
-	LinkInfo    map[string]LinkInfo `json:"link_info"`
+	Longitude     float64             `json:"lon"`
+	Latitude      float64             `json:"lat"`
+	Sysinfo       Sysinfo             `json:"sysinfo"`
+	APIVersion    string              `json:"api_version"`
+	MeshRF        MeshRF              `json:"meshrf"`
+	Gridsquare    string              `json:"grid_square"`
+	Node          string              `json:"node"`
+	Nodes         []Host              `json:"nodes"`
+	NodeDetails   NodeDetails         `json:"node_details"`
+	Tunnels       Tunnels             `json:"tunnels"`
+	LQM           lqm.LQM             `json:"lqm"`
+	Interfaces    []Interface         `json:"interfaces"`
+	Hosts         []Host              `json:"hosts"`
+	Services      []Service           `json:"services"`
+	ServicesLocal []Service           `json:"services_local"`
+	LinkInfo      map[string]LinkInfo `json:"link_info"`
 }
