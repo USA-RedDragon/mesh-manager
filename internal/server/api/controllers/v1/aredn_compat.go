@@ -364,7 +364,7 @@ func GETSysinfo(c *gin.Context) {
 			MeshGateway:          true,
 			BoardID:              "0x0000",
 			FirmwareManufacturer: "github.com/USA-RedDragon/mesh-manager",
-			FirmwareVersion:      di.Version,
+			FirmwareVersion:      "babel-" + di.Version,
 		},
 		Tunnels: apimodels.Tunnels{
 			ActiveTunnelCount: activeTunnels,
