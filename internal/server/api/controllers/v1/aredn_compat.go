@@ -516,19 +516,45 @@ func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 	ret := make(map[string]apimodels.LinkInfo)
 	switch trackers := getLQMInfo().Trackers.(type) {
 	case map[string]interface{}:
-		for _, tracker := range trackers {
-			tracker, ok := tracker.(lqm.Tracker)
+		for _, v := range trackers {
+			trackerMap, ok := v.(map[string]interface{})
 			if !ok {
 				continue
 			}
-			ip := tracker.IP
-			if ip == "" && tracker.CanonicalIP != "" {
-				ip = tracker.CanonicalIP
+			
+			ip := ""
+			if ipVal, ok := trackerMap["ip"].(string); ok {
+				ip = ipVal
 			}
+			if ip == "" {
+				if canonicalIP, ok := trackerMap["canonical_ip"].(string); ok {
+					ip = canonicalIP
+				}
+			}
+			
+			if ip == "" {
+				continue
+			}
+			
+			hostname := ""
+			if hostnameVal, ok := trackerMap["hostname"].(string); ok {
+				hostname = hostnameVal
+			}
+			
+			device := ""
+			if deviceVal, ok := trackerMap["device"].(string); ok {
+				device = deviceVal
+			}
+			
+			linkTypeStr := ""
+			if typeVal, ok := trackerMap["type"].(string); ok {
+				linkTypeStr = strings.ToUpper(typeVal)
+			}
+			
 			ret[ip] = apimodels.LinkInfo{
-				LinkType:  apimodels.LinkType(strings.ToUpper(string(tracker.Type))),
-				Hostname:  tracker.Hostname,
-				Interface: tracker.Device,
+				LinkType:  apimodels.LinkType(linkTypeStr),
+				Hostname:  hostname,
+				Interface: device,
 			}
 		}
 	default:
