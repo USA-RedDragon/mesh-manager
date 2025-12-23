@@ -525,7 +525,7 @@ func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 			}
 		}
 	default:
-		slog.Error("GETSysinfo: Unable to parse LQM trackers")
+		slog.Error("GETSysinfo: Unable to parse LQM trackers", "type", fmt.Sprintf("%T", trackers))
 		return nil
 	}
 	return ret
