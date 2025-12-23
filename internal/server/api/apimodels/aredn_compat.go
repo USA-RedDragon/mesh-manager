@@ -29,7 +29,7 @@ type Tunnels struct {
 type Interface struct {
 	Name string `json:"name"`
 	IP   string `json:"ip"`
-	MAC  string `json:"mac"`
+	MAC  string `json:"mac,omitempty"`
 }
 
 type Host struct {
