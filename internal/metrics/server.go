@@ -18,6 +18,12 @@ var (
 		Name: "node_details_meshrf",
 		Help: "Mesh RF Enabled",
 	})
+	Time = promauto.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "node_time_seconds",
+		Help: "System time in seconds since epoch (1970).",
+	}, func() float64 {
+		return float64(time.Now().Unix())
+	})
 	Info = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "node_aredn_info",
 		Help: "Node Info",
