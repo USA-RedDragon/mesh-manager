@@ -122,11 +122,11 @@ type LQM struct {
 }
 
 type LQMInfo struct {
-	Trackers        any                 `json:"trackers"`
-	Start           int64               `json:"start"`
-	Now             int64               `json:"now"`
-	Distance        any                 `json:"distance"`
-	TotalRouteCount int64               `json:"total_route_count"`
+	Trackers        any                 `json:"trackers,omitempty"`
+	Start           int64               `json:"start,omitempty"`
+	Now             int64               `json:"now,omitempty"`
+	Distance        any                 `json:"distance,omitempty"`
+	TotalRouteCount int64               `json:"total_route_count,omitempty"`
 }
 
 type DeviceType string
