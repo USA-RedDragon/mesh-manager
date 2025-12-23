@@ -423,18 +423,27 @@ func getInterfaces() []apimodels.Interface {
 		if iface.Name == "lo" || iface.Name == "wg0" {
 			continue
 		}
+		bestAddr := ""
 		for _, addr := range addrs {
 			ip, _, err := net.ParseCIDR(addr.String())
 			if err != nil {
 				slog.Error("GETSysinfo: Unable to parse address", "address", addr.String(), "error", err)
 				continue
 			}
-			ret = append(ret, apimodels.Interface{
-				Name: iface.Name,
-				IP:   ip.String(),
-				MAC:  iface.HardwareAddr.String(),
-			})
+			// Prefer IPv4
+			if ip.To4() != nil {
+				bestAddr = ip.String()
+				break
+			}
 		}
+		if bestAddr == "" {
+			continue
+		}
+		ret = append(ret, apimodels.Interface{
+			Name: iface.Name,
+			IP:   bestAddr,
+			MAC: iface.HardwareAddr.String(),
+		})
 	}
 	return ret
 }
