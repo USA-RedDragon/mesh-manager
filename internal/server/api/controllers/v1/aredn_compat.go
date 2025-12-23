@@ -439,11 +439,14 @@ func getInterfaces() []apimodels.Interface {
 		if bestAddr == "" {
 			continue
 		}
-		ret = append(ret, apimodels.Interface{
+		i := apimodels.Interface{
 			Name: iface.Name,
 			IP:   bestAddr,
-			MAC: iface.HardwareAddr.String(),
-		})
+		}
+		if len(iface.HardwareAddr) > 0 {
+			i.MAC = iface.HardwareAddr.String()
+		}
+		ret = append(ret, i)
 	}
 	return ret
 }
