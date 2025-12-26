@@ -64,6 +64,7 @@ type Config struct {
 	Wireguard                Wireguard `name:"wireguard" description:"Wireguard settings"`
 	SessionSecret            string    `name:"session-secret" description:"Session secret"`
 	LQM                      LQM       `name:"lqm" description:"Link Quality Monitoring settings"`
+	Walker 				bool      `name:"walker" description:"Enable periodic mesh walking to update meshmap" default:"false"`
 }
 
 type LQM struct {

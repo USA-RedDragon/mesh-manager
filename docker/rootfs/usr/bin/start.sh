@@ -101,6 +101,10 @@ nameserver 127.0.0.11
 options ndots:0
 EOF
 
+if [ -n "$WALKER" ]; then
+    (crontab -l ; echo "0 * * * * /usr/bin/mesh-manager walker") | crontab -
+fi
+
 # Use the dnsmasq that's about to run
 echo -e 'search local.mesh\nnameserver 127.0.0.1' > /etc/resolv.conf
 
