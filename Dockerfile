@@ -38,5 +38,7 @@ COPY --chown=root:root docker/rootfs/. /
 
 RUN rm -rf /etc/s6/olsrd
 
+RUN (crontab -l ; echo "30 * * * * /usr/bin/mesh-manager walk") | crontab -
+
 COPY mesh-manager /usr/bin/mesh-manager
 CMD ["/usr/bin/start.sh"]

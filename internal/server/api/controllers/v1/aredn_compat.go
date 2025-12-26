@@ -339,40 +339,73 @@ func GETSysinfo(c *gin.Context) {
 	}
 	doLQM := lqmStr == "1"
 
-	sysinfo := apimodels.SysinfoResponse{
+	sysinfo := apimodels.SysinfoResponse2Point0{
 		Longitude: di.Config.Longitude,
 		Latitude:  di.Config.Latitude,
-		Sysinfo: apimodels.Sysinfo{
-			Uptime: utils.SecondsToClock(info.Uptime),
-			Loadavg: [3]float64{
-				float64(info.Loads[0]) / float64(1<<16),
-				float64(info.Loads[1]) / float64(1<<16),
-				float64(info.Loads[2]) / float64(1<<16),
+		Sysinfo: apimodels.Sysinfo2Point0{
+			SysinfoCommon: apimodels.SysinfoCommon{
+				Uptime: utils.SecondsToClock(info.Uptime),
+				Loadavg: [3]float64{
+					float64(info.Loads[0]) / float64(1<<16),
+					float64(info.Loads[1]) / float64(1<<16),
+					float64(info.Loads[2]) / float64(1<<16),
+				},
 			},
 			FreeMemory: uint64(info.Freeram) * uint64(info.Unit),
 		},
-		APIVersion: "2.0",
-		MeshRF: apimodels.MeshRF{
-			Status: "off",
+		MeshRF: apimodels.MeshRF2Point0{
+			MeshRF1Point13: apimodels.MeshRF1Point13{
+				MeshRF1Point7: apimodels.MeshRF1Point7{
+					Status: "off",
+				},
+			},
 		},
-		Gridsquare: di.Config.Gridsquare,
-		Node:       di.Config.ServerName,
-		NodeDetails: apimodels.NodeDetails{
-			MeshSupernode:        di.Config.Supernode,
-			Description:          "Cloud Tunnel",
-			Model:                "Virtual",
+		NodeDetails: apimodels.NodeDetails2Point0{
+			NodeDetails1Point11: apimodels.NodeDetails1Point11{
+				MeshSupernode:        di.Config.Supernode,
+				NodeDetails1Point8: apimodels.NodeDetails1Point8{
+					NodeDetailsCommon: apimodels.NodeDetailsCommon{
+						Description:          "Cloud Tunnel",
+						Model:                "Virtual",
+						BoardID:              "0x0000",
+						FirmwareManufacturer: "github.com/USA-RedDragon/mesh-manager",
+						FirmwareVersion:      "babel-" + di.Version,
+					},
+				},
+			},
 			MeshGateway:          true,
-			BoardID:              "0x0000",
-			FirmwareManufacturer: "github.com/USA-RedDragon/mesh-manager",
-			FirmwareVersion:      "babel-" + di.Version,
 		},
-		Tunnels: apimodels.Tunnels{
+		Tunnels: apimodels.Tunnels1Point10{
 			ActiveTunnelCount: activeTunnels,
 		},
-		LQM: lqm.LQM{
-			Enabled: di.Config.LQM.Enabled,
+		SysinfoResponse1Point14: apimodels.SysinfoResponse1Point14{
+			LQM: lqm.LQM{
+				Enabled: di.Config.LQM.Enabled,
+			},
+			SysinfoResponse1Point12: apimodels.SysinfoResponse1Point12{
+				SysinfoResponse1Point11: apimodels.SysinfoResponse1Point11{
+					SysinfoResponse1Point10: apimodels.SysinfoResponse1Point10{
+						SysinfoResponse1Point9: apimodels.SysinfoResponse1Point9{
+							SysinfoResponse1Point8: apimodels.SysinfoResponse1Point8{
+								SysinfoResponse1Point7: apimodels.SysinfoResponse1Point7{
+									SysinfoResponse1Point6: apimodels.SysinfoResponse1Point6{
+										SysinfoResponse1Point5: apimodels.SysinfoResponse1Point5{
+											SysinfoResponseCommon: apimodels.SysinfoResponseCommon{
+												Interfaces: getInterfaces(),
+												APIVersion: "2.0",
+												Gridsquare: di.Config.Gridsquare,
+												Node:       di.Config.ServerName,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
-		Interfaces: getInterfaces(),
+		
 	}
 
 	if doHosts {
@@ -571,8 +604,8 @@ const (
 	modeLocalServices
 )
 
-func getServices(ctx context.Context, parser *olsr.ServicesParser, meshlinkParser *meshlink.Parser, mode serviceMode) []apimodels.Service {
-	services := []apimodels.Service{}
+func getServices(ctx context.Context, parser *olsr.ServicesParser, meshlinkParser *meshlink.Parser, mode serviceMode) []apimodels.Service2Point0 {
+	services := []apimodels.Service2Point0{}
 	serviceRegex := regexp.MustCompile(`^([^|]*)\|([^|]*)\|(.*)$`)
 	zeroRegex := regexp.MustCompile(`:0/`)
 
@@ -589,15 +622,17 @@ func getServices(ctx context.Context, parser *olsr.ServicesParser, meshlinkParse
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 			matches := serviceRegex.FindStringSubmatch(line)
-			if matches != nil && len(matches) == 4 {
+			if len(matches) == 4 {
 				link := matches[1]
 				if zeroRegex.MatchString(link) {
 					link = ""
 				}
-				services = append(services, apimodels.Service{
-					Name:     matches[3],
-					Protocol: matches[2],
-					Link:     link,
+				services = append(services, apimodels.Service2Point0{
+					ServiceCommon: apimodels.ServiceCommon{
+						Name:     matches[3],
+						Protocol: matches[2],
+						Link:     link,
+					},
 				})
 			}
 		}
@@ -624,16 +659,18 @@ func getServices(ctx context.Context, parser *olsr.ServicesParser, meshlinkParse
 			for scanner.Scan() {
 				line := strings.TrimSpace(scanner.Text())
 				matches := serviceRegex.FindStringSubmatch(line)
-				if matches != nil && len(matches) == 4 {
+				if len(matches) == 4 {
 					link := matches[1]
 					if zeroRegex.MatchString(link) {
 						link = ""
 					}
-					services = append(services, apimodels.Service{
-						Name:     matches[3],
+					services = append(services, apimodels.Service2Point0{
+						ServiceCommon: apimodels.ServiceCommon{
+							Name:     matches[3],
+							Link:     link,
+							Protocol: matches[2],
+						},
 						IP:       entry.Name(),
-						Link:     link,
-						Protocol: matches[2],
 					})
 				}
 			}
