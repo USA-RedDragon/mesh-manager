@@ -362,7 +362,7 @@ func GETSysinfo(c *gin.Context) {
 		},
 		NodeDetails: apimodels.NodeDetails2Point0{
 			NodeDetails1Point11: apimodels.NodeDetails1Point11{
-				MeshSupernode:        di.Config.Supernode,
+				MeshSupernode: di.Config.Supernode,
 				NodeDetails1Point8: apimodels.NodeDetails1Point8{
 					NodeDetailsCommon: apimodels.NodeDetailsCommon{
 						Description:          "Cloud Tunnel",
@@ -373,7 +373,7 @@ func GETSysinfo(c *gin.Context) {
 					},
 				},
 			},
-			MeshGateway:          true,
+			MeshGateway: true,
 		},
 		Tunnels: apimodels.Tunnels1Point10{
 			ActiveTunnelCount: activeTunnels,
@@ -405,7 +405,6 @@ func GETSysinfo(c *gin.Context) {
 				},
 			},
 		},
-		
 	}
 
 	if doHosts {
@@ -554,7 +553,7 @@ func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 			if !ok {
 				continue
 			}
-			
+
 			ip := ""
 			if ipVal, ok := trackerMap["ip"].(string); ok {
 				ip = ipVal
@@ -564,26 +563,26 @@ func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 					ip = canonicalIP
 				}
 			}
-			
+
 			if ip == "" {
 				continue
 			}
-			
+
 			hostname := ""
 			if hostnameVal, ok := trackerMap["hostname"].(string); ok {
 				hostname = hostnameVal
 			}
-			
+
 			device := ""
 			if deviceVal, ok := trackerMap["device"].(string); ok {
 				device = deviceVal
 			}
-			
+
 			linkTypeStr := ""
 			if typeVal, ok := trackerMap["type"].(string); ok {
 				linkTypeStr = strings.ToUpper(typeVal)
 			}
-			
+
 			ret[ip] = apimodels.LinkInfo{
 				LinkType:  apimodels.LinkType(linkTypeStr),
 				Hostname:  hostname,
@@ -670,7 +669,7 @@ func getServices(ctx context.Context, parser *olsr.ServicesParser, meshlinkParse
 							Link:     link,
 							Protocol: matches[2],
 						},
-						IP:       entry.Name(),
+						IP: entry.Name(),
 					})
 				}
 			}

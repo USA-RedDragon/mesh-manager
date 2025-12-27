@@ -37,9 +37,9 @@ func TestGenerateIPv6LinkLocalAddress(t *testing.T) {
 			ipv4 := net.ParseIP(tt.ipv4)
 			// ParseIP returns nil for invalid IP, but we need to handle the case where we pass something that isn't an IP string if we want to test ParseIP failure, but here we are testing GenerateIPv6LinkLocalAddress which takes net.IP.
 			// If net.ParseIP returns nil, GenerateIPv6LinkLocalAddress should handle it (it calls To4() which returns nil on nil receiver? No, To4 on nil IP returns nil).
-			
+
 			// If ipv4 is nil (invalid parse), we pass it.
-			
+
 			got, err := GenerateIPv6LinkLocalAddress(ipv4)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenerateIPv6LinkLocalAddress() error = %v, wantErr %v", err, tt.wantErr)

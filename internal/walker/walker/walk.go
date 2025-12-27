@@ -13,6 +13,7 @@ import (
 	"github.com/USA-RedDragon/mesh-manager/internal/walker/http"
 	"github.com/puzpuzpuz/xsync/v4"
 )
+
 type Task struct {
 	Hostname string
 	Func     func() (*apimodels.SysinfoResponse, error)

@@ -8,19 +8,19 @@ import (
 )
 
 type SysinfoResponse struct {
-	APIVersion    string              `json:"api_version"`
-	SysinfoResponse1Point0 *SysinfoResponse1Point0 `json:"-"`
-	SysinfoResponse1Point5 *SysinfoResponse1Point5 `json:"-"`
-	SysinfoResponse1Point6 *SysinfoResponse1Point6 `json:"-"`
-	SysinfoResponse1Point7 *SysinfoResponse1Point7 `json:"-"`
-	SysinfoResponse1Point8 *SysinfoResponse1Point8 `json:"-"`
-	SysinfoResponse1Point9 *SysinfoResponse1Point9 `json:"-"`
+	APIVersion              string                   `json:"api_version"`
+	SysinfoResponse1Point0  *SysinfoResponse1Point0  `json:"-"`
+	SysinfoResponse1Point5  *SysinfoResponse1Point5  `json:"-"`
+	SysinfoResponse1Point6  *SysinfoResponse1Point6  `json:"-"`
+	SysinfoResponse1Point7  *SysinfoResponse1Point7  `json:"-"`
+	SysinfoResponse1Point8  *SysinfoResponse1Point8  `json:"-"`
+	SysinfoResponse1Point9  *SysinfoResponse1Point9  `json:"-"`
 	SysinfoResponse1Point10 *SysinfoResponse1Point10 `json:"-"`
 	SysinfoResponse1Point11 *SysinfoResponse1Point11 `json:"-"`
 	SysinfoResponse1Point12 *SysinfoResponse1Point12 `json:"-"`
 	SysinfoResponse1Point13 *SysinfoResponse1Point13 `json:"-"`
 	SysinfoResponse1Point14 *SysinfoResponse1Point14 `json:"-"`
-	SysinfoResponse2Point0 *SysinfoResponse2Point0 `json:"-"`
+	SysinfoResponse2Point0  *SysinfoResponse2Point0  `json:"-"`
 }
 
 func (s *SysinfoResponse) Decode(r io.Reader) error {
@@ -354,13 +354,13 @@ func (s *SysinfoResponse) SetLinkInfo(linkInfo map[string]LinkInfo) {
 }
 
 type SysinfoCommon struct {
-	Uptime     string     `json:"uptime"`
-	Loadavg    [3]float64 `json:"loads"`
+	Uptime  string     `json:"uptime"`
+	Loadavg [3]float64 `json:"loads"`
 }
 
 type Sysinfo2Point0 struct {
 	SysinfoCommon
-	FreeMemory uint64     `json:"freememory"`
+	FreeMemory uint64 `json:"freememory,string"`
 }
 
 type Sysinfo1Point5 struct {
@@ -372,12 +372,12 @@ type Sysinfo1Point11 struct {
 }
 
 type meshRFCommon struct {
-	SSID   string `json:"ssid,omitempty"`
+	SSID string `json:"ssid,omitempty"`
 }
 
 type MeshRF1Point5 struct {
 	meshRFCommon
-	Channel int    `json:"channel,string,omitempty"`
+	Channel          int `json:"channel,string,omitempty"`
 	ChannelBandwidth int `json:"chanbw,string,omitempty"`
 }
 
@@ -388,18 +388,18 @@ type MeshRF1Point6 struct {
 
 type MeshRF1Point7 struct {
 	MeshRF1Point5
-	Status string `json:"status,omitempty"`
-	Frequency int `json:"freq,string,omitempty"`
+	Status    string `json:"status,omitempty"`
+	Frequency int    `json:"freq,string,omitempty"`
 }
 
 type MeshRF1Point13 struct {
 	MeshRF1Point7
-	Azimuth int `json:"azimuth,omitempty"`
-	Elevation int `json:"elevation,omitempty"`
-	Height int `json:"height,omitempty"`
-	Antenna string `json:"antenna,omitempty"`
-	AntennaAux string `json:"antenna_aux,omitempty"`
-	Mode 	string `json:"mode,omitempty"`
+	Azimuth    int    `json:"azimuth,string,omitempty"`
+	Elevation  int    `json:"elevation,string,omitempty"`
+	Height     int    `json:"height,string,omitempty"`
+	Antenna    any    `json:"antenna,omitempty"`
+	AntennaAux any    `json:"antenna_aux,omitempty"`
+	Mode       string `json:"mode,omitempty"`
 }
 
 type MeshRF2Point0 struct {
@@ -432,22 +432,22 @@ func (b *BoolString) UnmarshalJSON(data []byte) error {
 
 type NodeDetails1Point8 struct {
 	NodeDetailsCommon
-	MeshGateway          BoolString   `json:"mesh_gateway"`
+	MeshGateway BoolString `json:"mesh_gateway"`
 }
 
 type NodeDetails1Point11 struct {
 	NodeDetails1Point8
-	MeshSupernode        bool   `json:"mesh_supernode"`
+	MeshSupernode bool `json:"mesh_supernode"`
 }
 
 type NodeDetails2Point0 struct {
 	NodeDetails1Point11
-	MeshGateway          bool   `json:"mesh_gateway"`
+	MeshGateway bool `json:"mesh_gateway"`
 }
 
 type Tunnels1Point5 struct {
 	TunnelInstalled   bool `json:"tunnel_installed,string"`
-	ActiveTunnelCount int `json:"active_tunnel_count,string"`
+	ActiveTunnelCount int  `json:"active_tunnel_count,string"`
 }
 
 type Tunnels1Point10 struct {
@@ -456,7 +456,7 @@ type Tunnels1Point10 struct {
 
 type Tunnels1Point14 struct {
 	Tunnels1Point10
-	LegacyTunnelCount int `json:"legacy_tunnel_count"`
+	LegacyTunnelCount    int `json:"legacy_tunnel_count"`
 	WireguardTunnelCount int `json:"wireguard_tunnel_count"`
 }
 
@@ -483,7 +483,7 @@ type Service1Point5 struct {
 
 type Service2Point0 struct {
 	ServiceCommon
-	IP       string `json:"ip"`
+	IP string `json:"ip"`
 }
 
 type LinkType string
@@ -491,25 +491,25 @@ type LinkType string
 const (
 	LinkTypeWireguard LinkType = "WIREGUARD"
 	LinkTypeDTD       LinkType = "DTD"
-	LinkTypeRF       LinkType = "RF"
+	LinkTypeRF        LinkType = "RF"
 	LinkTypeTun       LinkType = "TUN"
 	LinkTypeSupernode LinkType = "SUPERNODE"
 )
 
 type linkInfoCommon struct {
-	Hostname  string   `json:"hostname"`
-	LinkType  LinkType `json:"linkType"`
+	Hostname string   `json:"hostname"`
+	LinkType LinkType `json:"linkType"`
 }
 
 type LinkInfo1Point7 struct {
 	linkInfoCommon
-	OLSRInterface string   `json:"olsrInterface"`
-	LinkQuality  int      `json:"linkQuality,string"`
-	NeighborLinkQuality int      `json:"neighborLinkQuality,string"`
-	Signal    int      `json:"signal,omitempty"`
-	Noise     int      `json:"noise,omitempty"`
-	TXRate   float64      `json:"tx_rate,omitempty"`
-	RXRate   float64      `json:"rx_rate,omitempty"`
+	OLSRInterface       string  `json:"olsrInterface"`
+	LinkQuality         int     `json:"linkQuality,string"`
+	NeighborLinkQuality int     `json:"neighborLinkQuality,string"`
+	Signal              int     `json:"signal,omitempty"`
+	Noise               int     `json:"noise,omitempty"`
+	TXRate              float64 `json:"tx_rate,omitempty"`
+	RXRate              float64 `json:"rx_rate,omitempty"`
 }
 
 type LinkInfo struct {
@@ -519,73 +519,73 @@ type LinkInfo struct {
 }
 
 type LQM1Point11 struct {
-	Enabled bool `json:"enabled"`
-	Config LQMConfig1Point11 `json:"config"`
-	Info  any   `json:"info"`
+	Enabled bool              `json:"enabled"`
+	Config  LQMConfig1Point11 `json:"config"`
+	Info    any               `json:"info"`
 }
 
 type LQMConfig1Point11 struct {
-	MinSNR int `json:"min_snr"`
-	MarginSNR int `json:"margin_snr"`
-	MinDistance int `json:"min_distance"`
-	MaxDistance int `json:"max_distance"`
-	AutoDistance int `json:"auto_distance"`
-	MinQuality int `json:"min_quality"`
-	MarginQuality int `json:"margin_quality"`
-	PingPenalty int `json:"ping_penalty"`
-	UserBlocks map[any]any `json:"user_blocks"`
-	UserAllows []string `json:"user_allowlist"`
+	MinSNR        int         `json:"min_snr"`
+	MarginSNR     int         `json:"margin_snr"`
+	MinDistance   int         `json:"min_distance"`
+	MaxDistance   int         `json:"max_distance"`
+	AutoDistance  int         `json:"auto_distance"`
+	MinQuality    int         `json:"min_quality"`
+	MarginQuality int         `json:"margin_quality"`
+	PingPenalty   int         `json:"ping_penalty"`
+	UserBlocks    map[any]any `json:"user_blocks"`
+	UserAllows    []string    `json:"user_allowlist"`
 }
 
 type SysinfoResponseCommon struct {
-	APIVersion    string              `json:"api_version"`
-	Node          string              `json:"node"`
-	Gridsquare    string              `json:"grid_square"`
-	Interfaces    []Interface         `json:"interfaces"`
+	APIVersion string      `json:"api_version"`
+	Node       string      `json:"node"`
+	Gridsquare string      `json:"grid_square"`
+	Interfaces []Interface `json:"interfaces"`
 }
 
 type SysinfoResponse1Point0 struct {
 	SysinfoResponseCommon
-	Model          string              `json:"model"`
-	BoardID 	 string              `json:"board_id"`
-	FirmwareManufacturer string              `json:"firmware_mfg"`
-	FirmwareVersion      string              `json:"firmware_version"`
-	TunnelInstalled bool                `json:"tunnel_installed,string"`
-	SSID 		string              `json:"ssid"`
-	Channel int 			   `json:"channel,string"`
-	ChannelBandwidth int        `json:"chanbw,string"`
-	ActiveTunnelCount int                `json:"active_tunnel_count,string"`
-	Latitude      float64             `json:"lat,string"`
-	Longitude     float64             `json:"lon,string"`
+	Model                string  `json:"model"`
+	BoardID              string  `json:"board_id"`
+	FirmwareManufacturer string  `json:"firmware_mfg"`
+	FirmwareVersion      string  `json:"firmware_version"`
+	TunnelInstalled      bool    `json:"tunnel_installed,string"`
+	SSID                 string  `json:"ssid"`
+	Channel              int     `json:"channel,string"`
+	ChannelBandwidth     int     `json:"chanbw,string"`
+	ActiveTunnelCount    int     `json:"active_tunnel_count,string"`
+	Latitude             float64 `json:"lat,string"`
+	Longitude            float64 `json:"lon,string"`
 }
 
 type SysinfoResponse1Point5 struct {
 	SysinfoResponseCommon
-	NodeDetails   NodeDetails1Point5         `json:"node_details"`
-	MeshRF 	  MeshRF1Point5              `json:"meshrf"`
-	Tunnels 	 Tunnels1Point5             `json:"tunnels"`
-	Latitude      float64             `json:"lat,string"`
-	Longitude     float64             `json:"lon,string"`
-	Sysinfo 	 Sysinfo1Point5             `json:"sysinfo"`
-	Hosts         []Host              `json:"hosts,omitempty"`
-	Services      []Service1Point5           `json:"services,omitempty"`
-	ServicesLocal []Service1Point5           `json:"services_local,omitempty"`
+	NodeDetails   NodeDetails1Point5 `json:"node_details"`
+	MeshRF        MeshRF1Point5      `json:"meshrf"`
+	Tunnels       Tunnels1Point5     `json:"tunnels"`
+	Latitude      float64            `json:"lat,string"`
+	Longitude     float64            `json:"lon,string"`
+	Sysinfo       Sysinfo1Point5     `json:"sysinfo"`
+	Hosts         []Host             `json:"hosts,omitempty"`
+	Services      []Service1Point5   `json:"services,omitempty"`
+	ServicesLocal []Service1Point5   `json:"services_local,omitempty"`
 }
 
 type SysinfoResponse1Point6 struct {
 	SysinfoResponse1Point5
-	MeshRF 	  MeshRF1Point6              `json:"meshrf"`
+	MeshRF MeshRF1Point6 `json:"meshrf"`
 }
 
 type SysinfoResponse1Point7 struct {
 	SysinfoResponse1Point6
-	MeshRF 	  MeshRF1Point7              `json:"meshrf"`
-	LinkInfo      map[string]LinkInfo `json:"link_info,omitempty"`
+	MeshRF   MeshRF1Point7       `json:"meshrf"`
+	LinkInfo map[string]LinkInfo `json:"link_info,omitempty"`
 }
 
 type SysinfoResponse1Point8 struct {
 	SysinfoResponse1Point7
-	NodeDetails   NodeDetails1Point8         `json:"node_details"`
+	NodeDetails NodeDetails1Point8 `json:"node_details"`
 }
 
 type SysinfoResponse1Point9 struct {
@@ -594,41 +594,41 @@ type SysinfoResponse1Point9 struct {
 
 type SysinfoResponse1Point10 struct {
 	SysinfoResponse1Point9
-	Tunnels 	 Tunnels1Point10             `json:"tunnels"`
+	Tunnels Tunnels1Point10 `json:"tunnels"`
 }
 
 type SysinfoResponse1Point11 struct {
 	SysinfoResponse1Point10
-	LQM           LQM1Point11             `json:"lqm,omitempty"`
-	NodeDetails   NodeDetails1Point11         `json:"node_details"`
+	LQM         LQM1Point11         `json:"lqm,omitempty"`
+	NodeDetails NodeDetails1Point11 `json:"node_details"`
 }
 
 type SysinfoResponse1Point12 struct {
 	SysinfoResponse1Point11
-	Nodes         []Host              `json:"nodes,omitempty"`
+	Nodes []Host `json:"nodes,omitempty"`
 }
 
 type SysinfoResponse1Point13 struct {
 	SysinfoResponse1Point12
-	MeshRF 	  MeshRF1Point13              `json:"meshrf"`
-	Topology any `json:"topology,omitempty"`
+	MeshRF   MeshRF1Point13 `json:"meshrf"`
+	Topology any            `json:"topology,omitempty"`
 }
 
 type SysinfoResponse1Point14 struct {
 	SysinfoResponse1Point12
-	MeshRF 	  MeshRF1Point13              `json:"meshrf"`
-	Tunnels 	 Tunnels1Point14             `json:"tunnels"`
-	LQM           lqm.LQM             `json:"lqm,omitempty"`
+	MeshRF  MeshRF1Point13  `json:"meshrf"`
+	Tunnels Tunnels1Point14 `json:"tunnels"`
+	LQM     lqm.LQM         `json:"lqm,omitempty"`
 }
 
 type SysinfoResponse2Point0 struct {
 	SysinfoResponse1Point14
-	Longitude     float64             `json:"lon"`
-	Latitude      float64             `json:"lat"`
-	Sysinfo       Sysinfo2Point0             `json:"sysinfo"`
-	MeshRF        MeshRF2Point0              `json:"meshrf"`
-	NodeDetails   NodeDetails2Point0         `json:"node_details"`
-	Tunnels       Tunnels1Point10             `json:"tunnels"`
-	Services      []Service2Point0           `json:"services,omitempty"`
-	ServicesLocal []Service2Point0           `json:"services_local,omitempty"`
+	Longitude     float64            `json:"lon"`
+	Latitude      float64            `json:"lat"`
+	Sysinfo       Sysinfo2Point0     `json:"sysinfo"`
+	MeshRF        MeshRF2Point0      `json:"meshrf"`
+	NodeDetails   NodeDetails2Point0 `json:"node_details"`
+	Tunnels       Tunnels1Point10    `json:"tunnels"`
+	Services      []Service2Point0   `json:"services,omitempty"`
+	ServicesLocal []Service2Point0   `json:"services_local,omitempty"`
 }

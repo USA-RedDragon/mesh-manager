@@ -122,11 +122,11 @@ type LQM struct {
 }
 
 type LQMInfo struct {
-	Trackers        any                 `json:"trackers,omitempty"`
-	Start           int64               `json:"start,omitempty"`
-	Now             int64               `json:"now,omitempty"`
-	Distance        any                 `json:"distance,omitempty"`
-	TotalRouteCount int64               `json:"total_route_count,omitempty"`
+	Trackers        any   `json:"trackers,omitempty"`
+	Start           int64 `json:"start,omitempty"`
+	Now             int64 `json:"now,omitempty"`
+	Distance        any   `json:"distance,omitempty"`
+	TotalRouteCount int64 `json:"total_route_count,omitempty"`
 }
 
 type DeviceType string
@@ -614,12 +614,12 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 				if !ok {
 					continue
 				}
-				
+
 				hostname := ""
 				if hostnameVal, ok := trackerMap["hostname"].(string); ok {
 					hostname = hostnameVal
 				}
-				
+
 				if myHostname == canonicalHostname(hostname) {
 					if pingSuccessTime, ok := trackerMap["ping_success_time"].(float64); ok {
 						t.RevPingSuccessTime = pingSuccessTime
@@ -638,7 +638,7 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 			// I only see one instance in the wild, so we log and skip
 			slog.Warn("LQM: Unexpected format for remote LQM trackers; expected map but got array", "mac", t.MAC, "hostname", t.Hostname)
 		}
-		
+
 	}
 
 	return nil
