@@ -87,10 +87,6 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 	}
 	enc := json.NewEncoder(w)
 
-	type nodeEntry struct {
-		Data apimodels.SysinfoResponse `json:"data"`
-	}
-
 	for resp := range respChan {
 		completed++
 		if resp == nil {
@@ -123,8 +119,8 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 				}
 			}
 
-			err = enc.Encode(nodeEntry{
-				Data: *resp,
+			err = enc.Encode(map[string]any{
+				"data": resp.GetObject(),
 			})
 			if err != nil {
 				return fmt.Errorf("failed to encode response: %w", err)
