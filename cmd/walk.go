@@ -102,13 +102,24 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 			if resp.GetMeshSupernode() {
 				linkInfo := resp.GetLinkInfo()
 				if linkInfo != nil {
-					for key, value := range linkInfo {
-						if value.LinkType == apimodels.LinkTypeTun || value.LinkType == apimodels.LinkTypeWireguard {
-							value.LinkType = apimodels.LinkTypeSupernode
-							linkInfo[key] = value
+					switch v := linkInfo.(type) {
+					case map[string]apimodels.LinkInfo1Point7:
+						for key, value := range v {
+							if value.LinkType == apimodels.LinkTypeTun || value.LinkType == apimodels.LinkTypeWireguard {
+								value.LinkType = apimodels.LinkTypeSupernode
+								v[key] = value
+							}
 						}
+						resp.SetLinkInfo(v)
+					case map[string]apimodels.LinkInfo2Point0:
+						for key, value := range v {
+							if value.LinkType == apimodels.LinkTypeTun || value.LinkType == apimodels.LinkTypeWireguard {
+								value.LinkType = apimodels.LinkTypeSupernode
+								v[key] = value
+							}
+						}
+						resp.SetLinkInfo(v)
 					}
-					resp.SetLinkInfo(linkInfo)
 				}
 			}
 

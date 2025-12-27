@@ -544,8 +544,8 @@ func getHosts(olsrParser *olsr.HostsParser, meshlinkParser *meshlink.Parser, mod
 	return ret
 }
 
-func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
-	ret := make(map[string]apimodels.LinkInfo)
+func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo2Point0 {
+	ret := make(map[string]apimodels.LinkInfo2Point0)
 	switch trackers := getLQMInfo().Trackers.(type) {
 	case map[string]interface{}:
 		for _, v := range trackers {
@@ -583,9 +583,11 @@ func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo {
 				linkTypeStr = strings.ToUpper(typeVal)
 			}
 
-			ret[ip] = apimodels.LinkInfo{
-				LinkType:  apimodels.LinkType(linkTypeStr),
-				Hostname:  hostname,
+			ret[ip] = apimodels.LinkInfo2Point0{
+				LinkInfoCommon: apimodels.LinkInfoCommon{
+					LinkType: apimodels.LinkType(linkTypeStr),
+					Hostname: hostname,
+				},
 				Interface: device,
 			}
 		}

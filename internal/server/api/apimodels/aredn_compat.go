@@ -270,8 +270,8 @@ func (s *SysinfoResponse) GetMeshSupernode() bool {
 	return false
 }
 
-// GetLinkInfo returns the link info map from the appropriate version of the response
-func (s *SysinfoResponse) GetLinkInfo() map[string]LinkInfo {
+// GetLinkInfo returns the link info from the appropriate version of the response
+func (s *SysinfoResponse) GetLinkInfo() any {
 	switch s.APIVersion {
 	case "1.0", "1.5", "1.6":
 		return nil
@@ -309,46 +309,55 @@ func (s *SysinfoResponse) GetLinkInfo() map[string]LinkInfo {
 	return nil
 }
 
-// SetLinkInfo updates the link info map in the appropriate version of the response
-func (s *SysinfoResponse) SetLinkInfo(linkInfo map[string]LinkInfo) {
+// SetLinkInfo sets the link info for the appropriate version of the response
+func (s *SysinfoResponse) SetLinkInfo(in any) {
 	switch s.APIVersion {
 	case "1.0", "1.5", "1.6":
 		return
-	case "1.7":
-		if s.SysinfoResponse1Point7 != nil {
-			s.SysinfoResponse1Point7.LinkInfo = linkInfo
+	case "1.7", "1.8", "1.9", "1.10", "1.11":
+		if val, ok := in.(map[string]LinkInfo1Point7); ok {
+			if s.SysinfoResponse1Point11 != nil {
+				s.SysinfoResponse1Point11.LinkInfo = val
+				return
+			}
+			if s.SysinfoResponse1Point10 != nil {
+				s.SysinfoResponse1Point10.LinkInfo = val
+				return
+			}
+			if s.SysinfoResponse1Point9 != nil {
+				s.SysinfoResponse1Point9.LinkInfo = val
+				return
+			}
+			if s.SysinfoResponse1Point8 != nil {
+				s.SysinfoResponse1Point8.LinkInfo = val
+				return
+			}
+			if s.SysinfoResponse1Point7 != nil {
+				s.SysinfoResponse1Point7.LinkInfo = val
+				return
+			}
 		}
-	case "1.8":
-		if s.SysinfoResponse1Point8 != nil {
-			s.SysinfoResponse1Point8.LinkInfo = linkInfo
-		}
-	case "1.9":
-		if s.SysinfoResponse1Point9 != nil {
-			s.SysinfoResponse1Point9.LinkInfo = linkInfo
-		}
-	case "1.10":
-		if s.SysinfoResponse1Point10 != nil {
-			s.SysinfoResponse1Point10.LinkInfo = linkInfo
-		}
-	case "1.11":
-		if s.SysinfoResponse1Point11 != nil {
-			s.SysinfoResponse1Point11.LinkInfo = linkInfo
-		}
-	case "1.12":
-		if s.SysinfoResponse1Point12 != nil {
-			s.SysinfoResponse1Point12.LinkInfo = linkInfo
-		}
-	case "1.13":
-		if s.SysinfoResponse1Point13 != nil {
-			s.SysinfoResponse1Point13.LinkInfo = linkInfo
-		}
-	case "1.14":
-		if s.SysinfoResponse1Point14 != nil {
-			s.SysinfoResponse1Point14.LinkInfo = linkInfo
+	case "1.12", "1.13", "1.14":
+		if val, ok := in.(map[string]LinkInfo1Point7); ok {
+			if s.SysinfoResponse1Point14 != nil {
+				s.SysinfoResponse1Point14.LinkInfo = val
+				return
+			}
+			if s.SysinfoResponse1Point13 != nil {
+				s.SysinfoResponse1Point13.LinkInfo = val
+				return
+			}
+			if s.SysinfoResponse1Point12 != nil {
+				s.SysinfoResponse1Point12.LinkInfo = val
+				return
+			}
 		}
 	case "2.0":
-		if s.SysinfoResponse2Point0 != nil {
-			s.SysinfoResponse2Point0.LinkInfo = linkInfo
+		if val, ok := in.(map[string]LinkInfo2Point0); ok {
+			if s.SysinfoResponse2Point0 != nil {
+				s.SysinfoResponse2Point0.LinkInfo = val
+				return
+			}
 		}
 	}
 }
@@ -388,8 +397,8 @@ type MeshRF1Point6 struct {
 
 type MeshRF1Point7 struct {
 	MeshRF1Point5
-	Status    string `json:"status,omitempty"`
-	Frequency int    `json:"freq,string,omitempty"`
+	Status    string  `json:"status,omitempty"`
+	Frequency float64 `json:"freq,string,omitempty"`
 }
 
 type MeshRF1Point13 struct {
@@ -404,10 +413,11 @@ type MeshRF1Point13 struct {
 
 type MeshRF2Point0 struct {
 	MeshRF1Point13
-	Polarization     string `json:"polarization,omitempty"`
-	Channel          int    `json:"channel,omitempty"`
-	ChannelBandwidth int    `json:"chanbw,omitempty"`
-	Frequency        int    `json:"freq,omitempty"`
+	Polarization     string  `json:"polarization,omitempty"`
+	Channel          int     `json:"channel,omitempty"`
+	ChannelBandwidth int     `json:"chanbw,omitempty"`
+	Frequency        float64 `json:"freq,omitempty"`
+	Height           float64 `json:"height,omitempty"`
 }
 
 type NodeDetailsCommon struct {
@@ -499,13 +509,13 @@ const (
 	LinkTypeSupernode LinkType = "SUPERNODE"
 )
 
-type linkInfoCommon struct {
+type LinkInfoCommon struct {
 	Hostname string   `json:"hostname"`
 	LinkType LinkType `json:"linkType"`
 }
 
 type LinkInfo1Point7 struct {
-	linkInfoCommon
+	LinkInfoCommon
 	OLSRInterface       string  `json:"olsrInterface"`
 	LinkQuality         int     `json:"linkQuality,string"`
 	NeighborLinkQuality int     `json:"neighborLinkQuality,string"`
@@ -515,10 +525,9 @@ type LinkInfo1Point7 struct {
 	RXRate              float64 `json:"rx_rate,omitempty"`
 }
 
-type LinkInfo struct {
-	Hostname  string   `json:"hostname"`
-	LinkType  LinkType `json:"linkType"`
-	Interface string   `json:"interface"`
+type LinkInfo2Point0 struct {
+	LinkInfoCommon
+	Interface string `json:"interface"`
 }
 
 type LQM1Point11 struct {
@@ -582,8 +591,8 @@ type SysinfoResponse1Point6 struct {
 
 type SysinfoResponse1Point7 struct {
 	SysinfoResponse1Point6
-	MeshRF   MeshRF1Point7       `json:"meshrf"`
-	LinkInfo map[string]LinkInfo `json:"link_info,omitempty"`
+	MeshRF   MeshRF1Point7              `json:"meshrf"`
+	LinkInfo map[string]LinkInfo1Point7 `json:"link_info,omitempty"`
 }
 
 type SysinfoResponse1Point8 struct {
@@ -626,12 +635,13 @@ type SysinfoResponse1Point14 struct {
 
 type SysinfoResponse2Point0 struct {
 	SysinfoResponse1Point14
-	Longitude     float64            `json:"lon"`
-	Latitude      float64            `json:"lat"`
-	Sysinfo       Sysinfo2Point0     `json:"sysinfo"`
-	MeshRF        MeshRF2Point0      `json:"meshrf"`
-	NodeDetails   NodeDetails2Point0 `json:"node_details"`
-	Tunnels       Tunnels1Point10    `json:"tunnels"`
-	Services      []Service2Point0   `json:"services,omitempty"`
-	ServicesLocal []Service2Point0   `json:"services_local,omitempty"`
+	Longitude     float64                    `json:"lon"`
+	Latitude      float64                    `json:"lat"`
+	Sysinfo       Sysinfo2Point0             `json:"sysinfo"`
+	MeshRF        MeshRF2Point0              `json:"meshrf"`
+	NodeDetails   NodeDetails2Point0         `json:"node_details"`
+	Tunnels       Tunnels1Point10            `json:"tunnels"`
+	Services      []Service2Point0           `json:"services,omitempty"`
+	ServicesLocal []Service2Point0           `json:"services_local,omitempty"`
+	LinkInfo      map[string]LinkInfo2Point0 `json:"link_info,omitempty"`
 }
