@@ -403,8 +403,8 @@ type MeshRF1Point7 struct {
 
 type MeshRF1Point13 struct {
 	MeshRF1Point7
-	Azimuth    int     `json:"azimuth,string,omitempty"`
-	Elevation  int     `json:"elevation,string,omitempty"`
+	Azimuth    float64 `json:"azimuth,string,omitempty"`
+	Elevation  float64 `json:"elevation,string,omitempty"`
 	Height     float64 `json:"height,string,omitempty"`
 	Antenna    any     `json:"antenna,omitempty"`
 	AntennaAux any     `json:"antenna_aux,omitempty"`
@@ -418,8 +418,8 @@ type MeshRF2Point0 struct {
 	ChannelBandwidth int     `json:"chanbw,omitempty"`
 	Frequency        float64 `json:"freq,omitempty"`
 	Height           float64 `json:"height,omitempty"`
-	Azimuth          int     `json:"azimuth,omitempty"`
-	Elevation        int     `json:"elevation,omitempty"`
+	Azimuth          float64 `json:"azimuth,omitempty"`
+	Elevation        float64 `json:"elevation,omitempty"`
 }
 
 type NodeDetailsCommon struct {
