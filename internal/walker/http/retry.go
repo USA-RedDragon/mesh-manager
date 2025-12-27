@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -33,13 +34,13 @@ func (c *Client) jitterSleep() {
 	time.Sleep(time.Duration(rand.Int63n(int64(c.jitter))))
 }
 
-func (c *Client) Get(url string) (*apimodels.SysinfoResponse, error) {
+func (c *Client) Get(ctx context.Context, url string) (*apimodels.SysinfoResponse, error) {
 	var resp *http.Response
 	c.jitterSleep()
 
 	for n := range c.retries {
 		var err error
-		resp, err = c.get(url)
+		resp, err = c.get(ctx, url)
 		if err != nil {
 			if n == c.retries-1 {
 				return nil, fmt.Errorf("failed to get url after %d retries: %w", c.retries, err)
@@ -66,8 +67,13 @@ func (c *Client) Get(url string) (*apimodels.SysinfoResponse, error) {
 	return &response, nil
 }
 
-func (c *Client) get(url string) (*http.Response, error) {
-	resp, err := c.client.Get(url)
+func (c *Client) get(ctx context.Context, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build request: %w", err)
+	}
+
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http get error: %w", err)
 	}

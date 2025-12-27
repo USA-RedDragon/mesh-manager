@@ -1,6 +1,7 @@
 package walker
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -39,7 +40,7 @@ func NewWalker(timeout time.Duration, retries int, jitter time.Duration) *Walker
 	}
 }
 
-func (w *Walker) Walk(startingNode string) (chan *apimodels.SysinfoResponse, error) {
+func (w *Walker) Walk(ctx context.Context, startingNode string) (chan *apimodels.SysinfoResponse, error) {
 	go func() {
 		for task := range w.tasks {
 			go func() {
@@ -54,7 +55,7 @@ func (w *Walker) Walk(startingNode string) (chan *apimodels.SysinfoResponse, err
 		}
 	}()
 
-	resp, err := w.walk(startingNode)
+	resp, err := w.walk(ctx, startingNode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to walk starting node: %w", err)
 	}
@@ -70,9 +71,9 @@ func (w *Walker) Walk(startingNode string) (chan *apimodels.SysinfoResponse, err
 	return w.responseChan, nil
 }
 
-func (w *Walker) walk(node string) (*apimodels.SysinfoResponse, error) {
+func (w *Walker) walk(ctx context.Context, node string) (*apimodels.SysinfoResponse, error) {
 	url := fmt.Sprintf("http://%s.local.mesh:8080/cgi-bin/sysinfo.json?hosts=1&link_info=1&lqm=1", node)
-	resp, err := w.client.Get(url)
+	resp, err := w.client.Get(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sysinfo from node %s: %w", node, err)
 	}
@@ -89,7 +90,7 @@ func (w *Walker) walk(node string) (*apimodels.SysinfoResponse, error) {
 				w.tasks <- Task{
 					Hostname: host.Name,
 					Func: func() (*apimodels.SysinfoResponse, error) {
-						return w.walk(host.Name)
+						return w.walk(ctx, host.Name)
 					},
 				}
 			}()

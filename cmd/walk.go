@@ -55,7 +55,7 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 	}
 
 	walk := walker.NewWalker(2*time.Minute, 5, 5*time.Second)
-	respChan, err := walk.Walk(config.ServerName)
+	respChan, err := walk.Walk(ctx, config.ServerName)
 	if err != nil {
 		return fmt.Errorf("failed to start walk: %w", err)
 	}

@@ -7,6 +7,21 @@ import (
 	"github.com/USA-RedDragon/mesh-manager/internal/services/lqm"
 )
 
+const (
+	APIVersion1Point0  = "1.0"
+	APIVersion1Point5  = "1.5"
+	APIVersion1Point6  = "1.6"
+	APIVersion1Point7  = "1.7"
+	APIVersion1Point8  = "1.8"
+	APIVersion1Point9  = "1.9"
+	APIVersion1Point10 = "1.10"
+	APIVersion1Point11 = "1.11"
+	APIVersion1Point12 = "1.12"
+	APIVersion1Point13 = "1.13"
+	APIVersion1Point14 = "1.14"
+	APIVersion2Point0  = "2.0"
+)
+
 type SysinfoResponse struct {
 	APIVersion              string                   `json:"api_version"`
 	SysinfoResponse1Point0  *SysinfoResponse1Point0  `json:"-"`
@@ -32,40 +47,40 @@ func (s *SysinfoResponse) Decode(r io.Reader) error {
 		return err
 	}
 	switch s.APIVersion {
-	case "1.0":
+	case APIVersion1Point0:
 		s.SysinfoResponse1Point0 = &SysinfoResponse1Point0{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point0)
-	case "1.5":
+	case APIVersion1Point5:
 		s.SysinfoResponse1Point5 = &SysinfoResponse1Point5{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point5)
-	case "1.6":
+	case APIVersion1Point6:
 		s.SysinfoResponse1Point6 = &SysinfoResponse1Point6{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point6)
-	case "1.7":
+	case APIVersion1Point7:
 		s.SysinfoResponse1Point7 = &SysinfoResponse1Point7{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point7)
-	case "1.8":
+	case APIVersion1Point8:
 		s.SysinfoResponse1Point8 = &SysinfoResponse1Point8{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point8)
-	case "1.9":
+	case APIVersion1Point9:
 		s.SysinfoResponse1Point9 = &SysinfoResponse1Point9{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point9)
-	case "1.10":
+	case APIVersion1Point10:
 		s.SysinfoResponse1Point10 = &SysinfoResponse1Point10{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point10)
-	case "1.11":
+	case APIVersion1Point11:
 		s.SysinfoResponse1Point11 = &SysinfoResponse1Point11{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point11)
-	case "1.12":
+	case APIVersion1Point12:
 		s.SysinfoResponse1Point12 = &SysinfoResponse1Point12{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point12)
-	case "1.13":
+	case APIVersion1Point13:
 		s.SysinfoResponse1Point13 = &SysinfoResponse1Point13{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point13)
-	case "1.14":
+	case APIVersion1Point14:
 		s.SysinfoResponse1Point14 = &SysinfoResponse1Point14{}
 		return json.Unmarshal(data, s.SysinfoResponse1Point14)
-	case "2.0":
+	case APIVersion2Point0:
 		s.SysinfoResponse2Point0 = &SysinfoResponse2Point0{}
 		return json.Unmarshal(data, s.SysinfoResponse2Point0)
 	default:
@@ -75,29 +90,29 @@ func (s *SysinfoResponse) Decode(r io.Reader) error {
 
 func (s *SysinfoResponse) GetObject() any {
 	switch s.APIVersion {
-	case "1.0":
+	case APIVersion1Point0:
 		return s.SysinfoResponse1Point0
-	case "1.5":
+	case APIVersion1Point5:
 		return s.SysinfoResponse1Point5
-	case "1.6":
+	case APIVersion1Point6:
 		return s.SysinfoResponse1Point6
-	case "1.7":
+	case APIVersion1Point7:
 		return s.SysinfoResponse1Point7
-	case "1.8":
+	case APIVersion1Point8:
 		return s.SysinfoResponse1Point8
-	case "1.9":
+	case APIVersion1Point9:
 		return s.SysinfoResponse1Point9
-	case "1.10":
+	case APIVersion1Point10:
 		return s.SysinfoResponse1Point10
-	case "1.11":
+	case APIVersion1Point11:
 		return s.SysinfoResponse1Point11
-	case "1.12":
+	case APIVersion1Point12:
 		return s.SysinfoResponse1Point12
-	case "1.13":
+	case APIVersion1Point13:
 		return s.SysinfoResponse1Point13
-	case "1.14":
+	case APIVersion1Point14:
 		return s.SysinfoResponse1Point14
-	case "2.0":
+	case APIVersion2Point0:
 		return s.SysinfoResponse2Point0
 	default:
 		return nil
@@ -107,9 +122,9 @@ func (s *SysinfoResponse) GetObject() any {
 // GetHosts returns the hosts from the appropriate version of the response
 func (s *SysinfoResponse) GetHosts() []Host {
 	switch s.APIVersion {
-	case "1.0":
+	case APIVersion1Point0:
 		return nil
-	case "1.5", "1.6", "1.7", "1.8", "1.9", "1.10", "1.11":
+	case APIVersion1Point5, APIVersion1Point6, APIVersion1Point7, APIVersion1Point8, APIVersion1Point9, APIVersion1Point10, APIVersion1Point11:
 		if s.SysinfoResponse1Point11 != nil {
 			return s.SysinfoResponse1Point11.Hosts
 		}
@@ -131,7 +146,7 @@ func (s *SysinfoResponse) GetHosts() []Host {
 		if s.SysinfoResponse1Point5 != nil {
 			return s.SysinfoResponse1Point5.Hosts
 		}
-	case "1.12", "1.13", "1.14":
+	case APIVersion1Point12, APIVersion1Point13, APIVersion1Point14:
 		if s.SysinfoResponse1Point14 != nil {
 			return s.SysinfoResponse1Point14.Hosts
 		}
@@ -141,7 +156,7 @@ func (s *SysinfoResponse) GetHosts() []Host {
 		if s.SysinfoResponse1Point12 != nil {
 			return s.SysinfoResponse1Point12.Hosts
 		}
-	case "2.0":
+	case APIVersion2Point0:
 		if s.SysinfoResponse2Point0 != nil {
 			return s.SysinfoResponse2Point0.Hosts
 		}
@@ -152,11 +167,11 @@ func (s *SysinfoResponse) GetHosts() []Host {
 // GetLatitude returns the latitude from the appropriate version of the response
 func (s *SysinfoResponse) GetLatitude() float64 {
 	switch s.APIVersion {
-	case "1.0":
+	case APIVersion1Point0:
 		if s.SysinfoResponse1Point0 != nil {
 			return s.SysinfoResponse1Point0.Latitude
 		}
-	case "1.5", "1.6", "1.7", "1.8", "1.9", "1.10", "1.11":
+	case APIVersion1Point5, APIVersion1Point6, APIVersion1Point7, APIVersion1Point8, APIVersion1Point9, APIVersion1Point10, APIVersion1Point11:
 		if s.SysinfoResponse1Point11 != nil {
 			return s.SysinfoResponse1Point11.Latitude
 		}
@@ -178,7 +193,7 @@ func (s *SysinfoResponse) GetLatitude() float64 {
 		if s.SysinfoResponse1Point5 != nil {
 			return s.SysinfoResponse1Point5.Latitude
 		}
-	case "1.12", "1.13", "1.14":
+	case APIVersion1Point12, APIVersion1Point13, APIVersion1Point14:
 		if s.SysinfoResponse1Point14 != nil {
 			return s.SysinfoResponse1Point14.Latitude
 		}
@@ -188,7 +203,7 @@ func (s *SysinfoResponse) GetLatitude() float64 {
 		if s.SysinfoResponse1Point12 != nil {
 			return s.SysinfoResponse1Point12.Latitude
 		}
-	case "2.0":
+	case APIVersion2Point0:
 		if s.SysinfoResponse2Point0 != nil {
 			return s.SysinfoResponse2Point0.Latitude
 		}
@@ -199,11 +214,11 @@ func (s *SysinfoResponse) GetLatitude() float64 {
 // GetLongitude returns the longitude from the appropriate version of the response
 func (s *SysinfoResponse) GetLongitude() float64 {
 	switch s.APIVersion {
-	case "1.0":
+	case APIVersion1Point0:
 		if s.SysinfoResponse1Point0 != nil {
 			return s.SysinfoResponse1Point0.Longitude
 		}
-	case "1.5", "1.6", "1.7", "1.8", "1.9", "1.10", "1.11":
+	case APIVersion1Point5, APIVersion1Point6, APIVersion1Point7, APIVersion1Point8, APIVersion1Point9, APIVersion1Point10, APIVersion1Point11:
 		if s.SysinfoResponse1Point11 != nil {
 			return s.SysinfoResponse1Point11.Longitude
 		}
@@ -225,7 +240,7 @@ func (s *SysinfoResponse) GetLongitude() float64 {
 		if s.SysinfoResponse1Point5 != nil {
 			return s.SysinfoResponse1Point5.Longitude
 		}
-	case "1.12", "1.13", "1.14":
+	case APIVersion1Point12, APIVersion1Point13, APIVersion1Point14:
 		if s.SysinfoResponse1Point14 != nil {
 			return s.SysinfoResponse1Point14.Longitude
 		}
@@ -235,7 +250,7 @@ func (s *SysinfoResponse) GetLongitude() float64 {
 		if s.SysinfoResponse1Point12 != nil {
 			return s.SysinfoResponse1Point12.Longitude
 		}
-	case "2.0":
+	case APIVersion2Point0:
 		if s.SysinfoResponse2Point0 != nil {
 			return s.SysinfoResponse2Point0.Longitude
 		}
@@ -246,13 +261,13 @@ func (s *SysinfoResponse) GetLongitude() float64 {
 // GetMeshSupernode returns whether this is a mesh supernode from the appropriate version of the response
 func (s *SysinfoResponse) GetMeshSupernode() bool {
 	switch s.APIVersion {
-	case "1.0", "1.5", "1.6", "1.7", "1.8", "1.9", "1.10":
+	case APIVersion1Point0, APIVersion1Point5, APIVersion1Point6, APIVersion1Point7, APIVersion1Point8, APIVersion1Point9, APIVersion1Point10:
 		return false
-	case "1.11":
+	case APIVersion1Point11:
 		if s.SysinfoResponse1Point11 != nil {
 			return s.SysinfoResponse1Point11.NodeDetails.MeshSupernode
 		}
-	case "1.12", "1.13", "1.14":
+	case APIVersion1Point12, APIVersion1Point13, APIVersion1Point14:
 		if s.SysinfoResponse1Point14 != nil {
 			return s.SysinfoResponse1Point14.NodeDetails.MeshSupernode
 		}
@@ -262,7 +277,7 @@ func (s *SysinfoResponse) GetMeshSupernode() bool {
 		if s.SysinfoResponse1Point12 != nil {
 			return s.SysinfoResponse1Point12.NodeDetails.MeshSupernode
 		}
-	case "2.0":
+	case APIVersion2Point0:
 		if s.SysinfoResponse2Point0 != nil {
 			return s.SysinfoResponse2Point0.NodeDetails.MeshSupernode
 		}
@@ -273,9 +288,9 @@ func (s *SysinfoResponse) GetMeshSupernode() bool {
 // GetLinkInfo returns the link info from the appropriate version of the response
 func (s *SysinfoResponse) GetLinkInfo() any {
 	switch s.APIVersion {
-	case "1.0", "1.5", "1.6":
+	case APIVersion1Point0, APIVersion1Point5, APIVersion1Point6:
 		return nil
-	case "1.7", "1.8", "1.9", "1.10", "1.11":
+	case APIVersion1Point7, APIVersion1Point8, APIVersion1Point9, APIVersion1Point10, APIVersion1Point11:
 		if s.SysinfoResponse1Point11 != nil {
 			return s.SysinfoResponse1Point11.LinkInfo
 		}
@@ -291,7 +306,7 @@ func (s *SysinfoResponse) GetLinkInfo() any {
 		if s.SysinfoResponse1Point7 != nil {
 			return s.SysinfoResponse1Point7.LinkInfo
 		}
-	case "1.12", "1.13", "1.14":
+	case APIVersion1Point12, APIVersion1Point13, APIVersion1Point14:
 		if s.SysinfoResponse1Point14 != nil {
 			return s.SysinfoResponse1Point14.LinkInfo
 		}
@@ -301,7 +316,7 @@ func (s *SysinfoResponse) GetLinkInfo() any {
 		if s.SysinfoResponse1Point12 != nil {
 			return s.SysinfoResponse1Point12.LinkInfo
 		}
-	case "2.0":
+	case APIVersion2Point0:
 		if s.SysinfoResponse2Point0 != nil {
 			return s.SysinfoResponse2Point0.LinkInfo
 		}
@@ -312,9 +327,9 @@ func (s *SysinfoResponse) GetLinkInfo() any {
 // SetLinkInfo sets the link info for the appropriate version of the response
 func (s *SysinfoResponse) SetLinkInfo(in any) {
 	switch s.APIVersion {
-	case "1.0", "1.5", "1.6":
+	case APIVersion1Point0, APIVersion1Point5, APIVersion1Point6:
 		return
-	case "1.7", "1.8", "1.9", "1.10", "1.11":
+	case APIVersion1Point7, APIVersion1Point8, APIVersion1Point9, APIVersion1Point10, APIVersion1Point11:
 		if val, ok := in.(map[string]LinkInfo1Point7); ok {
 			if s.SysinfoResponse1Point11 != nil {
 				s.SysinfoResponse1Point11.LinkInfo = val
@@ -337,7 +352,7 @@ func (s *SysinfoResponse) SetLinkInfo(in any) {
 				return
 			}
 		}
-	case "1.12", "1.13", "1.14":
+	case APIVersion1Point12, APIVersion1Point13, APIVersion1Point14:
 		if val, ok := in.(map[string]LinkInfo1Point7); ok {
 			if s.SysinfoResponse1Point14 != nil {
 				s.SysinfoResponse1Point14.LinkInfo = val
@@ -352,7 +367,7 @@ func (s *SysinfoResponse) SetLinkInfo(in any) {
 				return
 			}
 		}
-	case "2.0":
+	case APIVersion2Point0:
 		if val, ok := in.(map[string]LinkInfo2Point0); ok {
 			if s.SysinfoResponse2Point0 != nil {
 				s.SysinfoResponse2Point0.LinkInfo = val

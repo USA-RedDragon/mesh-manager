@@ -2,7 +2,6 @@ package v1
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -412,11 +411,11 @@ func GETSysinfo(c *gin.Context) {
 	}
 
 	if doServices {
-		sysinfo.Services = getServices(c.Request.Context(), di.OLSRServicesParser, di.MeshLinkParser, modeServices)
+		sysinfo.Services = getServices(modeServices)
 	}
 
 	if doLocalServices {
-		sysinfo.ServicesLocal = getServices(c.Request.Context(), di.OLSRServicesParser, di.MeshLinkParser, modeLocalServices)
+		sysinfo.ServicesLocal = getServices(modeLocalServices)
 	}
 
 	if doNodes {
@@ -424,7 +423,7 @@ func GETSysinfo(c *gin.Context) {
 	}
 
 	if doLinkInfo {
-		sysinfo.LinkInfo = getLinkInfo(c.Request.Context())
+		sysinfo.LinkInfo = getLinkInfo()
 	}
 
 	if doLQM && di.Config.LQM.Enabled {
@@ -553,7 +552,7 @@ func getHosts(olsrParser *olsr.HostsParser, meshlinkParser *meshlink.Parser, mod
 	return ret
 }
 
-func getLinkInfo(ctx context.Context) map[string]apimodels.LinkInfo2Point0 {
+func getLinkInfo() map[string]apimodels.LinkInfo2Point0 {
 	ret := make(map[string]apimodels.LinkInfo2Point0)
 	switch trackers := getLQMInfo().Trackers.(type) {
 	case map[string]interface{}:
@@ -614,7 +613,7 @@ const (
 	modeLocalServices
 )
 
-func getServices(ctx context.Context, parser *olsr.ServicesParser, meshlinkParser *meshlink.Parser, mode serviceMode) []apimodels.Service2Point0 {
+func getServices(mode serviceMode) []apimodels.Service2Point0 {
 	services := []apimodels.Service2Point0{}
 	serviceRegex := regexp.MustCompile(`^([^|]*)\|([^|]*)\|(.*)$`)
 	zeroRegex := regexp.MustCompile(`:0/`)
