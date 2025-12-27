@@ -24,46 +24,50 @@ type SysinfoResponse struct {
 }
 
 func (s *SysinfoResponse) Decode(r io.Reader) error {
-	if err := json.NewDecoder(r).Decode(&s); err != nil {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
 	switch s.APIVersion {
 	case "1.0":
 		s.SysinfoResponse1Point0 = &SysinfoResponse1Point0{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point0)
+		return json.Unmarshal(data, s.SysinfoResponse1Point0)
 	case "1.5":
 		s.SysinfoResponse1Point5 = &SysinfoResponse1Point5{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point5)
+		return json.Unmarshal(data, s.SysinfoResponse1Point5)
 	case "1.6":
 		s.SysinfoResponse1Point6 = &SysinfoResponse1Point6{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point6)
+		return json.Unmarshal(data, s.SysinfoResponse1Point6)
 	case "1.7":
 		s.SysinfoResponse1Point7 = &SysinfoResponse1Point7{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point7)
+		return json.Unmarshal(data, s.SysinfoResponse1Point7)
 	case "1.8":
 		s.SysinfoResponse1Point8 = &SysinfoResponse1Point8{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point8)
+		return json.Unmarshal(data, s.SysinfoResponse1Point8)
 	case "1.9":
 		s.SysinfoResponse1Point9 = &SysinfoResponse1Point9{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point9)
+		return json.Unmarshal(data, s.SysinfoResponse1Point9)
 	case "1.10":
 		s.SysinfoResponse1Point10 = &SysinfoResponse1Point10{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point10)
+		return json.Unmarshal(data, s.SysinfoResponse1Point10)
 	case "1.11":
 		s.SysinfoResponse1Point11 = &SysinfoResponse1Point11{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point11)
+		return json.Unmarshal(data, s.SysinfoResponse1Point11)
 	case "1.12":
 		s.SysinfoResponse1Point12 = &SysinfoResponse1Point12{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point12)
+		return json.Unmarshal(data, s.SysinfoResponse1Point12)
 	case "1.13":
 		s.SysinfoResponse1Point13 = &SysinfoResponse1Point13{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point13)
+		return json.Unmarshal(data, s.SysinfoResponse1Point13)
 	case "1.14":
 		s.SysinfoResponse1Point14 = &SysinfoResponse1Point14{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse1Point14)
+		return json.Unmarshal(data, s.SysinfoResponse1Point14)
 	case "2.0":
 		s.SysinfoResponse2Point0 = &SysinfoResponse2Point0{}
-		return json.NewDecoder(r).Decode(s.SysinfoResponse2Point0)
+		return json.Unmarshal(data, s.SysinfoResponse2Point0)
 	default:
 		return nil
 	}
