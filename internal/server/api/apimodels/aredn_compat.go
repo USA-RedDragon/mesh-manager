@@ -404,7 +404,10 @@ type MeshRF1Point13 struct {
 
 type MeshRF2Point0 struct {
 	MeshRF1Point13
-	Polarization string `json:"polarization,omitempty"`
+	Polarization     string `json:"polarization,omitempty"`
+	Channel          int    `json:"channel,omitempty"`
+	ChannelBandwidth int    `json:"chanbw,omitempty"`
+	Frequency        int    `json:"freq,omitempty"`
 }
 
 type NodeDetailsCommon struct {
