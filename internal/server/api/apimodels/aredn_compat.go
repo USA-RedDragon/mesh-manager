@@ -523,7 +523,7 @@ const (
 	LinkTypeDTD       LinkType = "DTD"
 	LinkTypeRF        LinkType = "RF"
 	LinkTypeTun       LinkType = "TUN"
-	LinkTypeSupernode LinkType = "SUPERNODE"
+	LinkTypeSupernode LinkType = "SUPER"
 )
 
 type LinkInfoCommon struct {
