@@ -517,8 +517,8 @@ type LinkInfoCommon struct {
 type LinkInfo1Point7 struct {
 	LinkInfoCommon
 	OLSRInterface       string  `json:"olsrInterface"`
-	LinkQuality         int     `json:"linkQuality,string"`
-	NeighborLinkQuality int     `json:"neighborLinkQuality,string"`
+	LinkQuality         int     `json:"linkQuality"`
+	NeighborLinkQuality int     `json:"neighborLinkQuality"`
 	Signal              int     `json:"signal,omitempty"`
 	Noise               int     `json:"noise,omitempty"`
 	TXRate              float64 `json:"tx_rate,omitempty"`
@@ -628,7 +628,6 @@ type SysinfoResponse1Point13 struct {
 
 type SysinfoResponse1Point14 struct {
 	SysinfoResponse1Point12
-	MeshRF  MeshRF1Point13  `json:"meshrf"`
 	Tunnels Tunnels1Point14 `json:"tunnels"`
 	LQM     lqm.LQM         `json:"lqm,omitempty"`
 }
