@@ -103,7 +103,7 @@ EOF
 
 WALKER=${WALKER:-}
 if [ -n "$WALKER" ]; then
-    (crontab -l ; echo "0 * * * * /usr/bin/mesh-manager walker") | crontab -
+    (crontab -l ; echo "30 * * * * /usr/bin/mesh-manager walker") | crontab -
 fi
 
 # Use the dnsmasq that's about to run
