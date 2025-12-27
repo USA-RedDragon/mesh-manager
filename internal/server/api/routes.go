@@ -33,7 +33,6 @@ func ApplyRoutes(router *gin.Engine, eventsChannel chan events.Event, config *co
 	})
 
 	router.POST("/notify", v1Controllers.POSTNotify)
-	router.POST("/notify-babel", v1Controllers.POSTNotifyBabel)
 
 	apiV1 := router.Group("/api/v1")
 	apiV1.Use(ratelimitMW)

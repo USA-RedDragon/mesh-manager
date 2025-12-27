@@ -25,7 +25,6 @@ func NewCommand(version, commit string) *cobra.Command {
 	}
 	cmd.AddCommand(newGenerateCommand(version, commit))
 	cmd.AddCommand(newNotifyCommand(version, commit))
-	cmd.AddCommand(newNotifyBabelCommand(version, commit))
 	cmd.AddCommand(newServerCommand(version, commit))
 	cmd.AddCommand(newWalkCommand(version, commit))
 	return cmd

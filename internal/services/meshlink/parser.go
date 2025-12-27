@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 const hostsDir = "/var/run/meshlink/hosts"
@@ -23,6 +24,7 @@ type Parser struct {
 	serviceCount int
 	isParsing    atomic.Bool
 	needParse    atomic.Bool // set if we get a call to Parse() while already parsing. We'll run Parse() again after the current parse is done to ensure we have the latest data
+	lastModTime  atomic.Int64
 }
 
 func NewParser() *Parser {
@@ -69,32 +71,50 @@ func (p *Parser) GetHostsPaginated(page int, limit int, filter string) []*Host {
 	return ret[start:end]
 }
 
-func (p *Parser) Parse() (err error) {
+func (p *Parser) Parse() error {
+	latestModTime, err := newestModTime(hostsDir, servicesDir)
+	if err != nil {
+		return err
+	}
+
+	latestNanos := latestModTime.UnixNano()
+	if latestNanos == 0 {
+		latestNanos = time.Now().UnixNano()
+	}
+
+	if last := p.lastModTime.Load(); last != 0 && latestNanos <= last {
+		return nil
+	}
+
 	if p.isParsing.Load() {
 		p.needParse.Store(true)
-		return
+		return nil
 	}
+
 	p.isParsing.Store(true)
+	defer p.isParsing.Store(false)
+
 	hosts, nodeCount, totalCount, serviceCount, err := parseHosts()
 	if err != nil {
-		return
+		return err
 	}
-	p.isParsing.Store(false)
+
 	p.nodesCount = nodeCount
 	p.totalCount = totalCount
 	p.currentHosts = hosts
 	p.serviceCount = serviceCount
+	p.lastModTime.Store(latestNanos)
+
 	if p.needParse.Load() {
 		go func() {
 			p.needParse.Store(false)
-			p.isParsing.Store(true)
-			defer p.isParsing.Store(false)
 			if err := p.Parse(); err != nil {
 				slog.Error("Error re-parsing hosts", "error", err)
 			}
 		}()
 	}
-	return
+
+	return nil
 }
 
 type HostData struct {
@@ -138,6 +158,34 @@ var (
 	regexMesh   = regexp.MustCompile(`\s[^\.]+$`)
 	taggedRegex = regexp.MustCompile(`^(.*)\s+\[(.*)\]$`)
 )
+
+func newestModTime(paths ...string) (time.Time, error) {
+	var newest time.Time
+
+	for _, root := range paths {
+		err := fs.WalkDir(os.DirFS(root), ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+
+			if info.ModTime().After(newest) {
+				newest = info.ModTime()
+			}
+
+			return nil
+		})
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
+
+	return newest, nil
+}
 
 func parseHosts() (ret []*Host, count int, totalCount int, serviceCount int, err error) {
 	err = fs.WalkDir(os.DirFS(hostsDir), ".", func(path string, d fs.DirEntry, err error) error {

@@ -55,28 +55,3 @@ func POSTNotify(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": "OK"})
 }
-
-func POSTNotifyBabel(c *gin.Context) {
-	if (c.RemoteIP() != "127.0.0.1" && c.RemoteIP() != "::1") || c.GetHeader("X-Forwarded-For") != "" {
-		slog.Warn("POSTNotify: Forbidden notify", "ip", c.RemoteIP())
-		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
-		return
-	}
-
-	go func() {
-		di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
-		if !ok {
-			slog.Error("Unable to get dependencies from context")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
-			return
-		}
-		err := di.MeshLinkParser.Parse()
-		if err != nil {
-			slog.Error("POSTNotifyBabel: Error parsing", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing"})
-			return
-		}
-	}()
-
-	c.JSON(http.StatusOK, gin.H{"status": "OK"})
-}

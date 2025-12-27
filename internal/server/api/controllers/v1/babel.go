@@ -18,6 +18,12 @@ func GETBabelHosts(c *gin.Context) {
 		return
 	}
 
+	if err := di.MeshLinkParser.Parse(); err != nil {
+		slog.Error("GETBabelHosts: Error parsing meshlink data", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing mesh hosts"})
+		return
+	}
+
 	pageStr, exists := c.GetQuery("page")
 	if !exists {
 		pageStr = "1"
@@ -58,6 +64,12 @@ func GETBabelHostsCount(c *gin.Context) {
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		return
+	}
+
+	if err := di.MeshLinkParser.Parse(); err != nil {
+		slog.Error("GETBabelHostsCount: Error parsing meshlink data", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing mesh hosts"})
 		return
 	}
 

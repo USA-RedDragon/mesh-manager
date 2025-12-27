@@ -20,8 +20,6 @@ meshlink \
   -C "upload services /etc/meshlink/services" \
   -C "upload publish /etc/meshlink/publish" \
   -C "upload subscribe /etc/meshlink/subscribe" \
-  -C "signal hosts mesh-manager notify-babel" \
-  -C "signal services mesh-manager notify-babel" \
   -C "${isolation}" &
 pid=$!
 echo -n "$pid" > /var/run/meshlink.pid

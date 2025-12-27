@@ -496,8 +496,17 @@ const (
 )
 
 func getHosts(olsrParser *olsr.HostsParser, meshlinkParser *meshlink.Parser, mode hostMode) []apimodels.Host {
+	if meshlinkParser != nil {
+		if err := meshlinkParser.Parse(); err != nil {
+			slog.Error("getHosts: Error parsing meshlink data", "error", err)
+		}
+	}
+
 	olsrHosts := olsrParser.GetHosts()
-	meshlinkHosts := meshlinkParser.GetHosts()
+	var meshlinkHosts []*meshlink.Host
+	if meshlinkParser != nil {
+		meshlinkHosts = meshlinkParser.GetHosts()
+	}
 
 	result := make(map[string]apimodels.Host)
 
