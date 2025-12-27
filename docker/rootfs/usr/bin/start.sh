@@ -104,6 +104,8 @@ EOF
 WALKER=${WALKER:-}
 if [ -n "$WALKER" ]; then
     (crontab -l ; echo "30 * * * * /usr/bin/mesh-manager walk") | crontab -
+    MESHMAP_APP_CONFIG=${MESHMAP_APP_CONFIG:-'{}'}
+    echo -n "${MESHMAP_APP_CONFIG}" > /meshmap/appConfig.json
 fi
 
 # Use the dnsmasq that's about to run
