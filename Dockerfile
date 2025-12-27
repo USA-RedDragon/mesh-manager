@@ -28,7 +28,7 @@ FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:ecd2d6343483d01d522f5db304459ad
 
 COPY --from=frontend-build /app/dist /www
 COPY --from=new-frontend-build /app/dist /new-www
-COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:ac05ea7e32a66a29862a8db824220839afa4801d97260290ea3aff9bd0596456 /usr/share/nginx/html /meshmap
+COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:5f43338e514b4ea5eb51c31c2d2aedd4b863ff5aef0561b30dcb47dd6adcf5ca /usr/share/nginx/html /meshmap
 
 RUN apk add --no-cache \
     nginx \
