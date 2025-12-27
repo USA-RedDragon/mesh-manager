@@ -5,6 +5,8 @@ set -euxo pipefail
 # Trap signals and exit
 trap "exit 0" SIGHUP SIGINT SIGTERM
 
+printenv >> /etc/environment
+
 ip link add dev br-wan type bridge
 ip link set dev eth0 master br-wan
 ip link set br-wan up
