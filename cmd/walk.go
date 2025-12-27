@@ -166,13 +166,84 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 	slog.Info("Finished walking")
 
 	// Save output
-	output := map[string]interface{}{
+	output := map[string]any{
 		"nonMapped":    nonMapped,
 		"hostsScraped": walk.TotalCount.Value(),
 		"date":         time.Now().UTC().Format(time.RFC3339),
 	}
 
-	slog.Info("output", "output", output)
+	err = createFile(output, responsesFile)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+
+	return nil
+}
+
+func createFile(output map[string]any, responsesFile *os.File) error {
+	file, err := os.Create("/meshmap/data/out.json.new")
+	if err != nil {
+		return fmt.Errorf("error creating output file: %w", err)
+	}
+
+	if err := json.NewEncoder(file).Encode(output); err != nil {
+		return fmt.Errorf("error encoding output file: %w", err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		return fmt.Errorf("error closing output file: %w", err)
+	}
+
+	// Now we need to combine out.json.new and responses.json
+	file, err = os.OpenFile("/meshmap/data/out.json.new", os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("error opening output file: %w", err)
+	}
+
+	// Seek to before the closing bracket
+	_, err = file.Seek(-2, io.SeekEnd)
+	if err != nil {
+		return fmt.Errorf("error seeking to before closing bracket: %w", err)
+	}
+	// Replace the closing bracket
+	n, err := file.Write([]byte(",\"nodeInfo\":"))
+	if err != nil {
+		return fmt.Errorf("error writing nodeInfo key: %w", err)
+	}
+	if n != 12 {
+		return fmt.Errorf("error writing nodeInfo key: %w", err)
+	}
+	_, err = responsesFile.Seek(0, io.SeekStart)
+	if err != nil {
+		return fmt.Errorf("error seeking to start of responses file: %w", err)
+	}
+	r := bufio.NewReader(responsesFile)
+	_, err = io.Copy(file, r)
+	if err != nil {
+		return fmt.Errorf("error copying responses file to output file: %w", err)
+	}
+	// Write the closing bracket
+	n, err = file.Write([]byte("}"))
+	if err != nil {
+		return fmt.Errorf("error writing closing bracket: %w", err)
+	}
+	if n != 1 {
+		return fmt.Errorf("error writing closing bracket: %w", err)
+	}
+	err = file.Sync()
+	if err != nil {
+		return fmt.Errorf("error syncing output file: %w", err)
+	}
+	err = responsesFile.Close()
+	if err != nil {
+		return fmt.Errorf("error closing responses file: %w", err)
+	}
+
+	err = os.Rename("/meshmap/data/out.json.new", "/meshmap/data/out.json")
+	if err != nil {
+		return fmt.Errorf("error renaming output file: %w", err)
+	}
 
 	return nil
 }

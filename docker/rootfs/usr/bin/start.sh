@@ -106,6 +106,11 @@ if [ -n "$WALKER" ]; then
     (crontab -l ; echo "30 * * * * /usr/bin/mesh-manager walk") | crontab -
     MESHMAP_APP_CONFIG=${MESHMAP_APP_CONFIG:-'{}'}
     echo -n "${MESHMAP_APP_CONFIG}" > /meshmap/appConfig.json
+    # if /meshmap/data/out.json does not exist, run walk after 60 seconds
+    if [ ! -f /meshmap/data/out.json ]; then
+        echo "No existing meshmap data found, running initial walk in 60 seconds"
+        sh -c 'sleep 60 ; /usr/bin/mesh-manager walk' &
+    fi
 fi
 
 # Use the dnsmasq that's about to run
