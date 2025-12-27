@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"os"
 	"time"
@@ -50,10 +49,14 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	if !config.Walker {
+		return fmt.Errorf("walker is not enabled in the configuration")
+	}
+
 	walk := walker.NewWalker(2*time.Minute, 5, 5*time.Second)
 	respChan, err := walk.Walk(config.ServerName)
 	if err != nil {
-		log.Fatalf("Error running walker: %v", err)
+		return fmt.Errorf("failed to start walk: %w", err)
 	}
 
 	slog.Info("Starting walk", "startingNode", config.ServerName)
@@ -70,17 +73,17 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 
 	responsesFile, err := os.CreateTemp(os.TempDir(), "responses.json")
 	if err != nil {
-		log.Fatalf("Error creating output file: %v", err)
+		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 
 	w := bufio.NewWriter(responsesFile)
 
 	n, err := w.Write([]byte("["))
 	if err != nil {
-		log.Fatalf("Error writing opening bracket: %v", err)
+		return fmt.Errorf("failed to write opening bracket: %w", err)
 	}
 	if n != 1 {
-		log.Fatalf("Error writing opening bracket: %v", err)
+		return fmt.Errorf("failed to write opening bracket: %w", err)
 	}
 	enc := json.NewEncoder(w)
 
@@ -113,14 +116,14 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 				Data: *resp,
 			})
 			if err != nil {
-				log.Fatalf("Error encoding response: %v", err)
+				return fmt.Errorf("failed to encode response: %w", err)
 			}
 			n, err = w.Write([]byte(","))
 			if err != nil {
-				log.Fatalf("Error writing comma: %v", err)
+				return fmt.Errorf("failed to write comma: %w", err)
 			}
 			if n != 1 {
-				log.Fatalf("Error writing comma: %v", err)
+				return fmt.Errorf("failed to write comma: %w", err)
 			}
 		} else {
 			nonMapped++
@@ -129,24 +132,24 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 
 	err = w.Flush()
 	if err != nil {
-		log.Fatalf("Error flushing output file: %v", err)
+		return fmt.Errorf("failed to flush responses: %w", err)
 	}
 
 	// We now need to delete the last comma and replace it with a closing bracket
 	_, err = responsesFile.Seek(-1, io.SeekEnd)
 	if err != nil {
-		log.Fatalf("Error seeking to end of file: %v", err)
+		return fmt.Errorf("failed to seek to end of file: %w", err)
 	}
 	written, err := responsesFile.Write([]byte("]"))
 	if err != nil {
-		log.Fatalf("Error writing closing bracket: %v", err)
+		return fmt.Errorf("failed to write closing bracket: %w", err)
 	}
 	if written != 1 {
-		log.Fatalf("Error writing closing bracket: %v", err)
+		return fmt.Errorf("failed to write closing bracket: %w", err)
 	}
 	err = responsesFile.Sync()
 	if err != nil {
-		log.Fatalf("Error syncing output file: %v", err)
+		return fmt.Errorf("failed to sync output file: %w", err)
 	}
 
 	slog.Info("Finished walking")

@@ -42,7 +42,7 @@ func (c *Client) Get(url string) (*apimodels.SysinfoResponse, error) {
 		resp, err = c.get(url)
 		if err != nil {
 			if n == c.retries-1 {
-				return nil, err
+				return nil, fmt.Errorf("failed to get url after %d retries: %w", c.retries, err)
 			}
 			c.jitterSleep()
 			continue
@@ -60,7 +60,7 @@ func (c *Client) Get(url string) (*apimodels.SysinfoResponse, error) {
 
 	var response apimodels.SysinfoResponse
 	if err := response.Decode(resp.Body); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode response body: %w", err)
 	}
 
 	return &response, nil
@@ -69,7 +69,7 @@ func (c *Client) Get(url string) (*apimodels.SysinfoResponse, error) {
 func (c *Client) get(url string) (*http.Response, error) {
 	resp, err := c.client.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("http get error: %w", err)
 	}
 
 	return resp, nil

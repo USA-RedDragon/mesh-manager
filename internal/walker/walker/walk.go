@@ -55,7 +55,7 @@ func (w *Walker) Walk(startingNode string) (chan *apimodels.SysinfoResponse, err
 
 	resp, err := w.walk(startingNode)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to walk starting node: %w", err)
 	}
 
 	w.responseChan <- resp
@@ -73,7 +73,7 @@ func (w *Walker) walk(node string) (*apimodels.SysinfoResponse, error) {
 	url := fmt.Sprintf("http://%s.local.mesh:8080/cgi-bin/sysinfo.json?hosts=1&link_info=1&lqm=1", node)
 	resp, err := w.client.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get sysinfo from node %s: %w", node, err)
 	}
 
 	for _, host := range resp.GetHosts() {
