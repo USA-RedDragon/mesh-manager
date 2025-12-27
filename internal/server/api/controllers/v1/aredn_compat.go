@@ -351,7 +351,7 @@ func GETSysinfo(c *gin.Context) {
 					float64(info.Loads[2]) / float64(1<<16),
 				},
 			},
-			FreeMemory: uint64(info.Freeram) * uint64(info.Unit),
+			FreeMemory: info.Freeram * uint64(info.Unit),
 		},
 		MeshRF: apimodels.MeshRF2Point0{
 			MeshRF1Point13: apimodels.MeshRF1Point13{

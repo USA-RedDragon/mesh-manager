@@ -500,6 +500,7 @@ func (s *Service) remoteRefresh(ctx context.Context) {
 	}
 }
 
+//nolint:gocyclo
 func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 	if t.IPv6LL == "" {
 		return nil
@@ -638,7 +639,6 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 			// I only see one instance in the wild, so we log and skip
 			slog.Warn("LQM: Unexpected format for remote LQM trackers; expected map but got array", "mac", t.MAC, "hostname", t.Hostname)
 		}
-
 	}
 
 	return nil

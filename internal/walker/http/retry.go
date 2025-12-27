@@ -29,7 +29,7 @@ func NewClient(timeout time.Duration, retries int, jitter time.Duration) *Client
 }
 
 func (c *Client) jitterSleep() {
-	//nolint:golint,gosec
+	//nolint:gosec
 	time.Sleep(time.Duration(rand.Int63n(int64(c.jitter))))
 }
 

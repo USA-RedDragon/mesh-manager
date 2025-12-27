@@ -31,6 +31,7 @@ func newWalkCommand(version, commit string) *cobra.Command {
 	}
 }
 
+//nolint:gocyclo
 func runWalk(cmd *cobra.Command, _ []string) error {
 	err := runRoot(cmd, nil)
 	if err != nil {
