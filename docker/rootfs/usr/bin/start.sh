@@ -101,6 +101,7 @@ nameserver 127.0.0.11
 options ndots:0
 EOF
 
+WALKER=${WALKER:-}
 if [ -n "$WALKER" ]; then
     (crontab -l ; echo "0 * * * * /usr/bin/mesh-manager walker") | crontab -
 fi
