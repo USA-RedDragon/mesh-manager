@@ -418,6 +418,8 @@ type MeshRF2Point0 struct {
 	ChannelBandwidth int     `json:"chanbw,omitempty"`
 	Frequency        float64 `json:"freq,omitempty"`
 	Height           float64 `json:"height,omitempty"`
+	Azimuth          int     `json:"azimuth,omitempty"`
+	Elevation        int     `json:"elevation,omitempty"`
 }
 
 type NodeDetailsCommon struct {
@@ -517,10 +519,10 @@ type LinkInfoCommon struct {
 type LinkInfo1Point7 struct {
 	LinkInfoCommon
 	OLSRInterface       string  `json:"olsrInterface"`
-	LinkQuality         int     `json:"linkQuality"`
-	NeighborLinkQuality int     `json:"neighborLinkQuality"`
-	Signal              int     `json:"signal,omitempty"`
-	Noise               int     `json:"noise,omitempty"`
+	LinkQuality         float64 `json:"linkQuality"`
+	NeighborLinkQuality float64 `json:"neighborLinkQuality"`
+	Signal              float64 `json:"signal,omitempty"`
+	Noise               float64 `json:"noise,omitempty"`
 	TXRate              float64 `json:"tx_rate,omitempty"`
 	RXRate              float64 `json:"rx_rate,omitempty"`
 }
