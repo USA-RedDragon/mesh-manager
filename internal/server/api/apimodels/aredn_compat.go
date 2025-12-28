@@ -333,38 +333,38 @@ func (s *SysinfoResponse) SetLinkInfo(in any) {
 	case APIVersion1Point7, APIVersion1Point8, APIVersion1Point9, APIVersion1Point10, APIVersion1Point11:
 		if val, ok := in.(map[string]LinkInfo1Point7); ok {
 			if s.SysinfoResponse1Point11 != nil {
-				s.SysinfoResponse1Point11.LinkInfo = val
+				s.SysinfoResponse1Point11.LinkInfo = LinkInfoMap1Point7(val)
 				return
 			}
 			if s.SysinfoResponse1Point10 != nil {
-				s.SysinfoResponse1Point10.LinkInfo = val
+				s.SysinfoResponse1Point10.LinkInfo = LinkInfoMap1Point7(val)
 				return
 			}
 			if s.SysinfoResponse1Point9 != nil {
-				s.SysinfoResponse1Point9.LinkInfo = val
+				s.SysinfoResponse1Point9.LinkInfo = LinkInfoMap1Point7(val)
 				return
 			}
 			if s.SysinfoResponse1Point8 != nil {
-				s.SysinfoResponse1Point8.LinkInfo = val
+				s.SysinfoResponse1Point8.LinkInfo = LinkInfoMap1Point7(val)
 				return
 			}
 			if s.SysinfoResponse1Point7 != nil {
-				s.SysinfoResponse1Point7.LinkInfo = val
+				s.SysinfoResponse1Point7.LinkInfo = LinkInfoMap1Point7(val)
 				return
 			}
 		}
 	case APIVersion1Point12, APIVersion1Point13, APIVersion1Point14:
 		if val, ok := in.(map[string]LinkInfo1Point7); ok {
 			if s.SysinfoResponse1Point14 != nil {
-				s.SysinfoResponse1Point14.LinkInfo = val
+				s.SysinfoResponse1Point14.LinkInfo = LinkInfoMap1Point7(val)
 				return
 			}
 			if s.SysinfoResponse1Point13 != nil {
-				s.SysinfoResponse1Point13.LinkInfo = val
+				s.SysinfoResponse1Point13.LinkInfo = LinkInfoMap1Point7(val)
 				return
 			}
 			if s.SysinfoResponse1Point12 != nil {
-				s.SysinfoResponse1Point12.LinkInfo = val
+				s.SysinfoResponse1Point12.LinkInfo = LinkInfoMap1Point7(val)
 				return
 			}
 		}
@@ -564,6 +564,21 @@ type LinkInfo1Point7 struct {
 	RXRate              float64 `json:"rx_rate,omitempty"`
 }
 
+type LinkInfoMap1Point7 map[string]LinkInfo1Point7
+
+func (l *LinkInfoMap1Point7) UnmarshalJSON(data []byte) error {
+	if len(data) > 0 && data[0] == '[' {
+		*l = make(LinkInfoMap1Point7)
+		return nil
+	}
+	var m map[string]LinkInfo1Point7
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+	*l = LinkInfoMap1Point7(m)
+	return nil
+}
+
 type LinkInfo2Point0 struct {
 	LinkInfoCommon
 	Interface string `json:"interface"`
@@ -630,8 +645,8 @@ type SysinfoResponse1Point6 struct {
 
 type SysinfoResponse1Point7 struct {
 	SysinfoResponse1Point6
-	MeshRF   MeshRF1Point7              `json:"meshrf"`
-	LinkInfo map[string]LinkInfo1Point7 `json:"link_info,omitempty"`
+	MeshRF   MeshRF1Point7      `json:"meshrf"`
+	LinkInfo LinkInfoMap1Point7 `json:"link_info,omitempty"`
 }
 
 type SysinfoResponse1Point8 struct {
