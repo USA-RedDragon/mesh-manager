@@ -3,6 +3,7 @@ package apimodels
 import (
 	"encoding/json"
 	"io"
+	"strconv"
 
 	"github.com/USA-RedDragon/mesh-manager/internal/services/lqm"
 )
@@ -412,8 +413,8 @@ type MeshRF1Point6 struct {
 
 type MeshRF1Point7 struct {
 	MeshRF1Point5
-	Status    string  `json:"status,omitempty"`
-	Frequency float64 `json:"freq,string,omitempty"`
+	Status    string      `json:"status,omitempty"`
+	Frequency FloatString `json:"freq,omitempty"`
 }
 
 type MeshRF1Point13 struct {
@@ -447,6 +448,27 @@ type NodeDetailsCommon struct {
 
 type NodeDetails1Point5 struct {
 	NodeDetailsCommon
+}
+
+type FloatString float64
+
+func (f *FloatString) UnmarshalJSON(data []byte) error {
+	str := string(data)
+	if str == "null" || str == `""` || str == `"nil"` {
+		*f = 0
+		return nil
+	}
+	// If it is a quoted string, unquote it first
+	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
+		str = str[1 : len(str)-1]
+	}
+
+	val, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		return err
+	}
+	*f = FloatString(val)
+	return nil
 }
 
 type BoolString bool
