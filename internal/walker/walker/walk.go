@@ -16,8 +16,9 @@ import (
 )
 
 type Task struct {
-	Hostname string
-	Func     func() (*apimodels.SysinfoResponse, error)
+	Hostname   string
+	SourceNode string
+	Func       func() (*apimodels.SysinfoResponse, error)
 }
 
 type Walker struct {
@@ -49,9 +50,9 @@ func (w *Walker) Walk(ctx context.Context, startingNode string) (chan *apimodels
 				response, err := task.Func()
 				if err != nil {
 					if strings.Contains(err.Error(), "Client.Timeout") {
-						slog.Debug("Timeout fetching data", "node", task.Hostname, "error", err)
+						slog.Debug("Timeout fetching data", "node", task.Hostname, "source", task.SourceNode, "error", err)
 					} else {
-						slog.Error("Error fetching data", "node", task.Hostname, "error", err)
+						slog.Error("Error fetching data", "node", task.Hostname, "source", task.SourceNode, "error", err)
 					}
 				}
 				w.responseChan <- response
@@ -92,7 +93,8 @@ func (w *Walker) walk(ctx context.Context, node string) (*apimodels.SysinfoRespo
 			w.TotalCount.Inc()
 			go func() {
 				w.tasks <- Task{
-					Hostname: host.Name,
+					Hostname:   host.Name,
+					SourceNode: node,
 					Func: func() (*apimodels.SysinfoResponse, error) {
 						return w.walk(ctx, host.Name)
 					},
