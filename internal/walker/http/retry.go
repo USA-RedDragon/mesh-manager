@@ -23,6 +23,12 @@ func NewClient(timeout time.Duration, retries int, jitter time.Duration) *Client
 			Transport: &http.Transport{
 				DisableKeepAlives: true,
 			},
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if req.URL.Path == "/a/sysinfo" {
+					return nil
+				}
+				return http.ErrUseLastResponse
+			},
 		},
 		retries: retries,
 		jitter:  jitter,
