@@ -48,7 +48,11 @@ func (w *Walker) Walk(ctx context.Context, startingNode string) (chan *apimodels
 
 				response, err := task.Func()
 				if err != nil {
-					slog.Error("Error fetching data", "node", task.Hostname, "error", err)
+					if strings.Contains(err.Error(), "Client.Timeout") {
+						slog.Debug("Timeout fetching data", "node", task.Hostname, "error", err)
+					} else {
+						slog.Error("Error fetching data", "node", task.Hostname, "error", err)
+					}
 				}
 				w.responseChan <- response
 			}()
