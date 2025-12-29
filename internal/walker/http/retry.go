@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"time"
 
@@ -17,11 +18,16 @@ type Client struct {
 }
 
 func NewClient(timeout time.Duration, retries int, jitter time.Duration) *Client {
+	dialer := &net.Dialer{
+		Timeout:   timeout,
+		KeepAlive: -1,
+	}
 	return &Client{
 		client: http.Client{
 			Timeout: timeout,
 			Transport: &http.Transport{
 				DisableKeepAlives: true,
+				DialContext:       dialer.DialContext,
 			},
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				if req.URL.Path == "/a/sysinfo" {
