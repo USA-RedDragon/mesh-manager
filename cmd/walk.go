@@ -76,6 +76,10 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
+	defer func() {
+		_ = responsesFile.Close()
+		_ = os.Remove(responsesFile.Name())
+	}()
 
 	w := bufio.NewWriter(responsesFile)
 
