@@ -109,6 +109,7 @@ func v1(group *gin.RouterGroup, config *config.Config) {
 	v1Tunnels.GET("/wireguard/server/count", v1Controllers.GETWireguardServerTunnelsCount)
 	v1Tunnels.GET("/wireguard/client/count/connected", v1Controllers.GETWireguardClientTunnelsCountConnected)
 	v1Tunnels.GET("/wireguard/server/count/connected", v1Controllers.GETWireguardServerTunnelsCountConnected)
+	v1Tunnels.GET("/:id/lqm", v1Controllers.GETTunnelLQM)
 	// v1Tunnels.GET("/:id", v1Controllers.GETTunnel)
 	v1Tunnels.PATCH("", middleware.RequireLogin(), v1Controllers.PATCHTunnel)
 	v1Tunnels.DELETE("/:id", middleware.RequireLogin(), v1Controllers.DELETETunnel)

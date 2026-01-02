@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -14,11 +16,13 @@ import (
 	"github.com/USA-RedDragon/mesh-manager/internal/server/api/middleware"
 	"github.com/USA-RedDragon/mesh-manager/internal/services"
 	"github.com/USA-RedDragon/mesh-manager/internal/services/babel"
+	"github.com/USA-RedDragon/mesh-manager/internal/services/lqm"
 	"github.com/USA-RedDragon/mesh-manager/internal/services/olsr"
 	"github.com/USA-RedDragon/mesh-manager/internal/wireguard"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+	"gorm.io/gorm"
 )
 
 func GETTunnels(c *gin.Context) {
@@ -135,6 +139,82 @@ func GETTunnels(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, gin.H{"total": total, "tunnels": tunnels})
 	}
+}
+
+func GETTunnelLQM(c *gin.Context) {
+	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
+	if !ok {
+		slog.Error("Unable to get dependencies from context")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		return
+	}
+
+	if !di.Config.LQM.Enabled {
+		c.JSON(http.StatusNotFound, gin.H{"error": "LQM is disabled"})
+		return
+	}
+
+	tunnelID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		slog.Error("GETTunnelLQM: Invalid tunnel id", "id", c.Param("id"), "error", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tunnel id"})
+		return
+	}
+
+	tunnel, err := models.FindTunnelByID(di.DB, uint(tunnelID))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Tunnel not found"})
+			return
+		}
+
+		slog.Error("GETTunnelLQM: Error fetching tunnel", "id", tunnelID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching tunnel"})
+		return
+	}
+
+	lqmInfo := getLQMInfo()
+	if lqmInfo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "LQM data unavailable"})
+		return
+	}
+
+	trackers := normalizeLQMTrackers(lqmInfo)
+	if len(trackers) == 0 {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "LQM data unavailable"})
+		return
+	}
+
+	tracker := findTrackerForTunnel(tunnel, trackers)
+	if tracker == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No LQM data for tunnel"})
+		return
+	}
+
+	quality := tracker.Quality
+	if quality < 0 {
+		quality = 0
+	}
+	if quality > 100 {
+		quality = 100
+	}
+
+	errorsPct := 100 - quality
+	if errorsPct < 0 {
+		errorsPct = 0
+	}
+
+	response := apimodels.TunnelLQMResponse{
+		ID:        tunnel.ID,
+		IP:        firstNonEmpty(tracker.IP, tracker.CanonicalIP),
+		Hostname:  tracker.Hostname,
+		RXQuality: quality,
+		Quality:   quality,
+		RTT:       tracker.RTT,
+		Errors:    errorsPct,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func GETWireguardTunnelsCount(c *gin.Context) {
@@ -846,4 +926,82 @@ func DELETETunnel(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Tunnel deleted"})
+}
+
+func normalizeLQMTrackers(info *lqm.LQMInfo) map[string]lqm.Tracker {
+	normalized := make(map[string]lqm.Tracker)
+
+	switch trackers := info.Trackers.(type) {
+	case map[string]lqm.Tracker:
+		for key, tracker := range trackers {
+			normalized[key] = tracker
+		}
+	case map[string]*lqm.Tracker:
+		for key, tracker := range trackers {
+			if tracker == nil {
+				continue
+			}
+			normalized[key] = *tracker
+		}
+	case map[string]any:
+		for key, raw := range trackers {
+			serialized, err := json.Marshal(raw)
+			if err != nil {
+				slog.Warn("GETTunnelLQM: Failed to marshal tracker", "key", key, "error", err)
+				continue
+			}
+
+			var tracker lqm.Tracker
+			if err := json.Unmarshal(serialized, &tracker); err != nil {
+				slog.Warn("GETTunnelLQM: Failed to unmarshal tracker", "key", key, "error", err)
+				continue
+			}
+
+			normalized[key] = tracker
+		}
+	default:
+		return normalized
+	}
+
+	return normalized
+}
+
+func findTrackerForTunnel(tunnel models.Tunnel, trackers map[string]lqm.Tracker) *lqm.Tracker {
+	tunnelIP := strings.TrimSpace(tunnel.IP)
+	canonicalHost := canonicalizeHostname(tunnel.Hostname)
+
+	for _, tracker := range trackers {
+		trackerCopy := tracker
+		if tunnelIP != "" {
+			if strings.TrimSpace(trackerCopy.IP) == tunnelIP {
+				return &trackerCopy
+			}
+			if strings.TrimSpace(trackerCopy.CanonicalIP) == tunnelIP {
+				return &trackerCopy
+			}
+		}
+
+		if canonicalHost != "" && canonicalizeHostname(trackerCopy.Hostname) == canonicalHost {
+			return &trackerCopy
+		}
+	}
+
+	return nil
+}
+
+func canonicalizeHostname(hostname string) string {
+	h := strings.ToLower(hostname)
+	h = strings.TrimSuffix(h, ".local.mesh")
+	h = strings.TrimPrefix(h, "dtdlink.")
+	return h
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		trimmed := strings.TrimSpace(v)
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }

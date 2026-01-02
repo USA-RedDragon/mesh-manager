@@ -14,6 +14,13 @@ import type { TunnelConnectionEvent, TunnelDisconnectionEvent, TunnelStatsEvent 
 
 type ConnectionTime = string | Moment | 'Never'
 
+type TunnelLqm = {
+  rx_quality: number | null
+  quality: number | null
+  rtt: number | null
+  errors: number | null
+}
+
 interface Tunnel {
   id: number
   rx_bytes_per_sec: number
@@ -33,6 +40,7 @@ interface Tunnel {
   password?: string
   client?: boolean
   created_at: string
+  lqm?: TunnelLqm
 }
 
 const props = defineProps<{
@@ -44,6 +52,7 @@ const totalRecords = ref(0)
 const pageSize = ref(10)
 const loading = ref(false)
 const search = ref('')
+const fetchRequestId = ref(0)
 
 const instance = getCurrentInstance()
 const bus = instance?.proxy?.$EventBus
@@ -58,6 +67,16 @@ function formatConnection(time: ConnectionTime) {
   const asMoment = typeof time === 'string' ? moment(time) : time
   if (!asMoment || !asMoment.isValid()) return 'Never'
   return asMoment.fromNow()
+}
+
+function formatPercent(value?: number | null) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
+  return `${Math.round(value)}%`
+}
+
+function formatMs(value?: number | null) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
+  return `${Math.round(value)} ms`
 }
 
 const columns = computed<ColumnDef<Tunnel>[]>(() => {
@@ -120,6 +139,22 @@ const columns = computed<ColumnDef<Tunnel>[]>(() => {
           })
         }
         return h('span', row.original.ip)
+      },
+    },
+    {
+      id: 'lqm',
+      header: () => h('span', 'Link Quality'),
+      cell: ({ row }) => {
+        const lqm = row.original.lqm
+        const quality = lqm?.rx_quality ?? lqm?.quality ?? null
+        const rtt = lqm?.rtt ?? null
+        const errors = lqm?.errors ?? (quality !== null && quality !== undefined ? Math.max(0, 100 - quality) : null)
+
+        return h('div', { class: 'text-sm leading-tight' }, [
+          h('p', [h('span', { class: 'font-semibold' }, 'RX: '), formatPercent(quality)]),
+          h('p', [h('span', { class: 'font-semibold' }, 'RTT: '), formatMs(rtt)]),
+          h('p', [h('span', { class: 'font-semibold' }, 'Errors: '), formatPercent(errors)]),
+        ])
       },
     },
     {
@@ -204,6 +239,7 @@ const columns = computed<ColumnDef<Tunnel>[]>(() => {
 })
 
 async function fetchData(page = 1, limit = pageSize.value) {
+  const requestId = ++fetchRequestId.value
   loading.value = true
   try {
     const params = [`page=${page}`, `limit=${limit}`, `admin=${props.admin ?? false}`, 'type=wireguard']
@@ -223,16 +259,74 @@ async function fetchData(page = 1, limit = pageSize.value) {
         connection_time: connection,
         total_rx_mb: totalRx,
         total_tx_mb: totalTx,
+        lqm: undefined,
       }
     })
     tunnels.value = normalized
     totalRecords.value = res.data.total
     pageSize.value = limit
+
+    await fetchLqmMetrics(normalized, requestId)
   } catch (err) {
     console.error(err)
   } finally {
-    loading.value = false
+    if (requestId === fetchRequestId.value) {
+      loading.value = false
+    }
   }
+}
+
+async function fetchLqmMetrics(list: Tunnel[], requestId: number) {
+  if (!list.length) return
+
+  const requests = list.map(async (tunnel) => {
+    try {
+      const res = await API.get(`/tunnels/${tunnel.id}/lqm`)
+      return { id: tunnel.id, data: res.data }
+    } catch {
+      return null
+    }
+  })
+
+  const results = await Promise.allSettled(requests)
+  if (requestId !== fetchRequestId.value) return
+
+  results.forEach((result) => {
+    if (result.status !== 'fulfilled') return
+    const value = result.value
+    if (!value || !value.data) return
+
+    const target = tunnels.value.find((t) => t.id === value.id)
+    if (!target) return
+
+    const qualityRaw = value.data.rx_quality ?? value.data.quality
+    const quality = typeof qualityRaw === 'number'
+      ? qualityRaw
+      : Number.isFinite(Number(qualityRaw))
+        ? Number(qualityRaw)
+        : null
+
+    const errorsRaw = value.data.errors
+    const errors = typeof errorsRaw === 'number'
+      ? errorsRaw
+      : quality !== null && quality !== undefined
+        ? Math.max(0, 100 - quality)
+        : null
+
+    const rttRaw = value.data.rtt
+    const rtt = typeof rttRaw === 'number'
+      ? rttRaw
+      : Number.isFinite(Number(rttRaw))
+        ? Number(rttRaw)
+        : null
+
+    target.lqm = {
+      rx_quality: quality,
+      quality,
+      rtt,
+      errors,
+    }
+  })
 }
 
 function updateTunnelStats(event: TunnelStatsEvent) {

@@ -43,6 +43,16 @@ type TunnelWithPass struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
+type TunnelLQMResponse struct {
+	ID        uint   `json:"id"`
+	IP        string `json:"ip,omitempty"`
+	Hostname  string `json:"hostname,omitempty"`
+	RXQuality int    `json:"rx_quality"`
+	Quality   int    `json:"quality"`
+	RTT       int    `json:"rtt"`
+	Errors    int    `json:"errors"`
+}
+
 type EditTunnel struct {
 	ID        uint   `json:"id" binding:"required"`
 	Enabled   *bool  `json:"enabled" binding:"required"`
