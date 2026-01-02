@@ -25,8 +25,8 @@ type Tunnel struct {
 	RXBytesPerSec      uint64         `json:"rx_bytes_per_sec"`
 	TXBytesPerSec      uint64         `json:"tx_bytes_per_sec"`
 	Wireguard          bool           `json:"wireguard" gorm:"default:false"`
-	WireguardServerKey string         `json:"wireguard_server_key"`
-	WireguardPort      uint16         `json:"wireguard_port"`
+	WireguardServerKey string         `json:"-"`
+	WireguardPort      uint16         `json:"-"`
 	ConnectionTime     time.Time      `json:"connection_time"`
 	CreatedAt          time.Time      `json:"created_at"`
 	UpdatedAt          time.Time      `json:"-"`
