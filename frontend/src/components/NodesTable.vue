@@ -1,244 +1,268 @@
-<template>
-  <DataTable
-    :value="hosts"
-    dataKey="ip"
-    :paginator="true"
-    :lazy="true"
-    :totalRecords="totalRecords"
-    v-model:filters="filters"
-    :rows="50"
-    :loading="loading"
-    filterDisplay="menu"
-    :globalFilterFields="['hostname']"
-    :scrollable="true"
-    @page="onPage($event)"
-  >
-    <template #header>
-        <p>Found {{ this.nodesCount }} nodes and {{ this.devicesCount }} total devices.</p>
-        <br />
-        <div class="flex justify-content-between">
-            <PVButton type="button" icon="pi pi-filter-slash" label="Clear" outlined @click="clearFilter()" />
-            <span class="p-input-icon-left">
-                <i class="pi pi-search" />
-                <InputText v-model="filters['global'].value" @change="onFilter()" placeholder="Search" />
-            </span>
-        </div>
-    </template>
-    <template #empty> No nodes found. </template>
-    <template #loading> Loading nodes, please wait. </template>
-    <Column field="hostname" header="Name">
-      <template #body="slotProps">
-        <a target="_blank" :href="'http://' + slotProps.data.hostname + '.local.mesh'">
-          {{ slotProps.data.hostname }}
-        </a>
-      </template>
-    </Column>
-    <Column field="ip" header="IP"></Column>
-    <Column field="children" header="Devices">
-      <template #body="slotProps">
-        <p v-for="child in slotProps.data.children" v-bind:key="child.hostname">
-          {{ child.hostname }} ({{ child.ip }})
-        </p>
-      </template>
-    </Column>
-    <Column field="services" header="Services">
-      <template #body="slotProps">
-        <span v-for="child in slotProps.data.children" v-bind:key="child.hostname">
-          <span v-for="service in child.services" v-bind:key="service.url">
-            <p v-if="service.should_link">
-              <a target="_blank" :href="service.url">{{ service.name }}</a>
-            </p>
-            <p v-else>{{ service.name }}</p>
-          </span>
-        </span>
-        <p v-for="service in slotProps.data.services" v-bind:key="service.url">
-          <span v-if="service.should_link">
-            <a target="_blank" :href="service.url">{{ service.name }}</a>
-          </span>
-          <span v-else>{{ service.name }}</span>
-        </p>
-      </template>
-    </Column>
-  </DataTable>
-</template>
+<script setup lang="ts">
+import type { ColumnDef } from '@tanstack/vue-table'
+import { onMounted, ref } from 'vue'
+import DataTable from './datatable/DataTable.vue'
+import API from '../services/API'
 
-<script>
-import { FilterMatchMode } from 'primevue/api';
-import Button from 'primevue/button';
-import Column from 'primevue/column';
-import DataTable from 'primevue/datatable';
-import InputText from 'primevue/inputtext';
+import { h } from 'vue'
+import { Button as UiButton } from '@/components/ui/button'
 
-import { mapStores } from 'pinia';
-import { useSettingsStore } from '@/store';
+interface Service {
+  url: string
+  protocol: string
+  name: string
+  shouldLink: boolean
+}
 
-import API from '@/services/API';
+interface NodeNoChildren {
+  hostname: string
+  ip: string
+  services: Service[]
+  etx?: number | null
+}
 
-export default {
-  props: {
-    babel: {
-      type: Boolean,
-      default: false,
+interface Node {
+  hostname: string
+  ip: string
+  services: Service[]
+  children: NodeNoChildren[]
+  etx?: number | null
+}
+
+const columns: ColumnDef<Node>[] = [
+  {
+    accessorKey: 'hostname',
+    header: () => h('div', {  }, 'Name'),
+    cell: ({ row }) => {
+      const hostname = row.getValue('hostname')
+      return h('a', {
+        target: "_blank",
+        href: `http://${hostname}.local.mesh`,
+        class: 'text-primary underline underline-offset-2 font-medium'
+      }, row.getValue('hostname'))
     },
   },
-  components: {
-    Column,
-    DataTable,
-    InputText,
-    PVButton: Button,
+  {
+    accessorKey: 'ip',
+    header: () => h('div', {  }, 'IP'),
+    cell: ({ row }) => {
+      return h('p', { }, row.getValue('ip'))
+    },
   },
-  data: function() {
-    return {
-      hosts: [],
-      loading: false,
-      totalRecords: 0,
-      filters: null,
-      page: 1,
-      nodesCount: 0,
-      devicesCount: 0,
-    };
-  },
-  created() {
-    this.initFilters();
-  },
-  mounted() {
-    this.fetchData();
-  },
-  unmounted() {
-  },
-  methods: {
-    onPage(event) {
-      this.loading = true;
-      this.page = event.page + 1;
-      if (this.filters.global.value != null) {
-        this.fetchDataFiltered(this.filters.global.value, event.page + 1, event.rows);
-      } else {
-        this.fetchData(event.page + 1, event.rows);
+  {
+    accessorKey: 'etx',
+    header: () => h('div', {  }, 'ETX'),
+    cell: ({ row }) => {
+      const value = row.getValue('etx') as number | null | undefined
+      if (value === null || value === undefined) {
+        return h('span', { }, '—')
       }
-    },
-    initFilters() {
-      this.filters = {
-        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-      };
-    },
-    onFilter() {
-      this.loading = true;
-      this.fetchDataFiltered(this.filters.global.value, this.page);
-    },
-    fetchData(page = 1, limit = 50) {
-      this.loading = true;
-      const api = this.babel ? '/babel' : '/olsr';
-      API.get(`${api}/hosts/count`)
-        .then((res) => {
-          this.nodesCount = res.data.nodes;
-          this.devicesCount = res.data.total;
-        })
-        .catch((err) => {
-          console.error(err);
-        });
-      API.get(`${api}/hosts?page=${page}&limit=${limit}`)
-        .then((res) => {
-          if (!res.data.nodes) {
-            res.data.nodes = [];
-          }
-
-          // Iterate through each node's services and each node's child's services
-          // and make them a new URL()
-          for (let i = 0; i < res.data.nodes.length; i++) {
-            const node = res.data.nodes[i];
-            if (node.services != null) {
-              for (let j = 0; j < node.services.length; j++) {
-                const service = node.services[j];
-                service.url = new URL(service.url);
-                service.url.hostname = service.url.hostname + '.local.mesh';
-                node.services[j] = service;
-              }
-            }
-            if (node.children != null) {
-              for (let j = 0; j < node.children.length; j++) {
-                const child = node.children[j];
-                if (child.services != null) {
-                  for (let k = 0; k < child.services.length; k++) {
-                    const service = child.services[k];
-                    service.url = new URL(service.url);
-                    service.url.hostname = service.url.hostname + '.local.mesh';
-                    child.services[k] = service;
-                  }
-                }
-                node.children[j] = child;
-              }
-            }
-            res.data.nodes[i] = node;
-          }
-
-          this.hosts = res.data.nodes;
-          this.totalRecords = res.data.total;
-          this.loading = false;
-        })
-        .catch((err) => {
-          console.error(err);
-        });
-    },
-    fetchDataFiltered(filter, page = 1, limit = 50) {
-      this.loading = true;
-      const api = this.babel ? '/babel' : '/olsr';
-      API.get(`${api}/hosts?page=${page}&limit=${limit}&filter=${filter}`)
-        .then((res) => {
-          if (!res.data.nodes) {
-            res.data.nodes = [];
-          }
-
-          // Iterate through each node's services and each node's child's services
-          // and make them a new URL()
-          for (let i = 0; i < res.data.nodes.length; i++) {
-            const node = res.data.nodes[i];
-            if (node.services != null) {
-              for (let j = 0; j < node.services.length; j++) {
-                const service = node.services[j];
-                service.url = new URL(service.url);
-                service.url.hostname = service.url.hostname + '.local.mesh';
-                node.services[j] = service;
-              }
-            }
-            if (node.children != null) {
-              for (let j = 0; j < node.children.length; j++) {
-                const child = node.children[j];
-                if (child.services != null) {
-                  for (let k = 0; k < child.services.length; k++) {
-                    const service = child.services[k];
-                    service.url = new URL(service.url);
-                    service.url.hostname = service.url.hostname + '.local.mesh';
-                    child.services[k] = service;
-                  }
-                }
-                node.children[j] = child;
-              }
-            }
-            res.data.nodes[i] = node;
-          }
-
-          this.hosts = res.data.nodes;
-          this.totalRecords = res.data.total;
-          this.loading = false;
-        })
-        .catch((err) => {
-          console.error(err);
-        });
-    },
-    clearFilter() {
-      this.initFilters();
-      this.loading = true;
-      this.fetchData(this.page);
+      const formatted = (value / 256).toFixed(2)
+      return h('span', { }, formatted)
     },
   },
-  computed: {
-    ...mapStores(useSettingsStore),
+  {
+    accessorKey: 'children',
+    header: () => h('div', {  }, 'Devices'),
+    cell: ({ row }) => {
+      const devices = row.getValue('children') as NodeNoChildren[]
+      const ret = []
+      if (!devices || devices.length === 0) {
+        return h('p', { }, '')
+      }
+      for (let i = 0; i < devices.length; i++) {
+        const device = devices[i]
+        ret.push(h('p', { }, device.hostname + ' (' + device.ip + ')'))
+      }
+      return h('div', { }, ret)
+    },
   },
-};
+  {
+    accessorKey: 'services',
+    header: () => h('div', {  }, 'Services'),
+    cell: ({ row }) => {
+      const services = row.getValue('services') as Service[]
+      const ret = []
+      if (!services || services.length === 0) {
+        return h('p', { }, '')
+      }
+      for (let i = 0; i < services.length; i++) {
+        const service = services[i]
+        ret.push(h('a', {
+          target: "_blank",
+          href: service.url,
+          class: 'text-primary underline underline-offset-2 font-medium'
+        }, service.name))
+        if (i < services.length - 1) {
+          ret.push(h('br', { }))
+        }
+      }
+      return h('div', { }, ret)
+    },
+  },
+]
+
+const data = ref<Node[]>([])
+const loading = ref(false)
+const devicesCount = ref(0)
+const nodesCount = ref(0)
+const totalRecords = ref(0)
+const limit = ref(10)
+const search = ref('')
+
+const props = defineProps<{
+  babel?: boolean
+}>()
+
+function ipv4ToInt(ip: string): number | null {
+  const parts = ip.split('.').map((p) => Number(p))
+  if (parts.length !== 4 || parts.some((p) => Number.isNaN(p) || p < 0 || p > 255)) return null
+  return (((parts[0] << 24) >>> 0) | ((parts[1] << 16) >>> 0) | ((parts[2] << 8) >>> 0) | (parts[3] >>> 0)) >>> 0
+}
+
+function parseCIDR(cidr: string): { prefix: number; length: number } | null {
+  const [ipPart, lenPart] = cidr.split('/')
+  const length = Number(lenPart)
+  if (Number.isNaN(length) || length < 0 || length > 32) return null
+  const ipInt = ipv4ToInt(ipPart)
+  if (ipInt === null) return null
+  return { prefix: ipInt, length }
+}
+
+function etxForIp(ip: string, etxMap: Record<string, number>): number | null {
+  const ipInt = ipv4ToInt(ip)
+  if (ipInt === null) return null
+
+  let bestLen = -1
+  let bestMetric: number | null = null
+
+  for (const [cidr, metric] of Object.entries(etxMap)) {
+    const parsed = parseCIDR(cidr)
+    if (!parsed) continue
+
+    const mask = parsed.length === 0 ? 0 : ((0xffffffff << (32 - parsed.length)) >>> 0)
+    if ((ipInt & mask) === (parsed.prefix & mask)) {
+      if (parsed.length > bestLen || (parsed.length === bestLen && bestMetric !== null && metric < bestMetric)) {
+        bestLen = parsed.length
+        bestMetric = metric
+      }
+    }
+  }
+
+  return bestMetric
+}
+
+async function fetchData(page = 1, pageSize = 10) {
+  loading.value = true
+  limit.value = pageSize
+  const api = props.babel ? '/babel' : '/olsr'
+
+  const params = [`page=${page}`, `limit=${pageSize}`]
+  if (search.value) {
+    params.push(`filter=${encodeURIComponent(search.value.trim())}`)
+  }
+
+  try {
+    const countPromise = API.get(`${api}/hosts/count`)
+    const hostsPromise = API.get(`${api}/hosts?${params.join('&')}`)
+    const etxPromise = props.babel ? API.get(`${api}/etx`) : null
+
+    const [countRes, hostsRes, etxRes] = await Promise.all([
+      countPromise,
+      hostsPromise,
+      etxPromise ?? Promise.resolve(null),
+    ])
+
+    nodesCount.value = countRes.data.nodes
+    devicesCount.value = countRes.data.total
+
+    const etxMap: Record<string, number> = etxRes?.data?.etx ?? {}
+
+    const nodes = hostsRes.data.nodes || []
+
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+
+      node.etx = etxForIp(node.ip, etxMap)
+
+      if (node.services != null) {
+        for (let j = 0; j < node.services.length; j++) {
+          const service = node.services[j]
+          const url = new URL(service.url)
+          url.hostname = url.hostname + '.local.mesh'
+          service.url = url.toString()
+          node.services[j] = service
+        }
+      }
+
+      if (node.children != null) {
+        for (let j = 0; j < node.children.length; j++) {
+          const child = node.children[j]
+          if (child.services != null) {
+            for (let k = 0; k < child.services.length; k++) {
+              const service = child.services[k]
+              const url = new URL(service.url)
+              url.hostname = url.hostname + '.local.mesh'
+              service.url = url.toString()
+              child.services[k] = service
+            }
+          }
+          node.children[j] = child
+        }
+      }
+
+      nodes[i] = node
+    }
+
+    data.value = nodes
+    totalRecords.value = hostsRes.data.total
+  } catch (_err) {
+    // Errors are logged to console; UI will just omit ETX/rows on failure
+    console.error(_err)
+  } finally {
+    loading.value = false
+  }
+}
+
+function onSearch() {
+  fetchData(1, limit.value)
+}
+
+function clearSearch() {
+  search.value = ''
+  fetchData(1, limit.value)
+}
+
+onMounted(() => {
+  fetchData(1, limit.value)
+})
 </script>
 
-<style scoped>
-.p-input-icon-left {
-  margin: initial;
-}
-</style>
+<template>
+  <div class="mx-auto space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-muted-foreground">Found {{ nodesCount }} nodes and {{ devicesCount }} total devices.</p>
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium" for="nodes-search">Search</label>
+        <input
+          id="nodes-search"
+          v-model="search"
+          type="text"
+          class="w-48 rounded-md border px-2 py-1 text-sm"
+          placeholder="Hostname"
+          @keyup.enter="onSearch"
+        />
+        <UiButton size="sm" variant="secondary" @click="onSearch">Apply</UiButton>
+        <UiButton size="sm" variant="ghost" @click="clearSearch">Clear</UiButton>
+      </div>
+    </div>
+    <DataTable
+      :columns="columns"
+      :data="data"
+      pagination
+      :rowCount="totalRecords"
+      :pageCount="Math.ceil(totalRecords / limit) || 1"
+      :fetchData="fetchData"
+    />
+  </div>
+</template>

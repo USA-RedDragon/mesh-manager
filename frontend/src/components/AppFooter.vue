@@ -11,7 +11,7 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 import API from '@/services/API';
 export default {
   data: function() {

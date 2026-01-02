@@ -1,31 +1,33 @@
 <template>
   <div>
     <Card>
-      <template #title>Tunnels</template>
-      <template #content>
+      <CardHeader>
+        <CardTitle>Tunnels</CardTitle>
+      </CardHeader>
+      <CardContent>
         <TunnelsTable />
-      </template>
+      </CardContent>
     </Card>
   </div>
 </template>
 
-<script>
-import Card from 'primevue/card';
+<script lang="ts">
 import TunnelsTable from '@/components/TunnelsTable.vue';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 export default {
   components: {
     Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
     TunnelsTable,
   },
-  created() {},
-  mounted() {},
-  unmounted() {},
-  data: function() {
-    return {};
-  },
-  methods: {},
-  computed: {},
 };
 </script>
 

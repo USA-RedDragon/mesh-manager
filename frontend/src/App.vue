@@ -1,22 +1,24 @@
 <template>
-  <AppHeader />
-  <RouterView />
-  <AppFooter />
-  <ThemeConfig />
+  <div>
+    <AppHeader />
+    <div class="container mx-auto pt-2">
+      <RouterView />
+    </div>
+    <AppFooter />
+  </div>
 </template>
 
-<script>
+<script lang="ts">
 import { RouterView } from 'vue-router';
 import AppFooter from './components/AppFooter.vue';
 import AppHeader from './components/AppHeader.vue';
-import ThemeConfig from './components/ThemeConfig.vue';
 import API from '@/services/API';
 
 import { mapStores } from 'pinia';
 import { useUserStore, useSettingsStore } from '@/store';
 
 import { getWebsocketURI } from '@/services/util';
-import ws from '@/services/ws';
+import { Websocket, type WebsocketMessageHandler } from '@/services/ws';
 
 export default {
   name: 'App',
@@ -24,17 +26,16 @@ export default {
     RouterView,
     AppHeader,
     AppFooter,
-    ThemeConfig,
   },
   data() {
     return {
-      socket: null,
+      socket: new Websocket(getWebsocketURI() + '/events', this.onWebsocketMessage as WebsocketMessageHandler),
     };
   },
   created() {},
   mounted() {
     this.fetchData();
-    this.socket = ws.connect(getWebsocketURI() + '/events', this.onWebsocketMessage);
+    this.socket.connect();
   },
   unmounted() {
     if (this.socket) {
@@ -42,7 +43,7 @@ export default {
     }
   },
   methods: {
-    onWebsocketMessage(event) {
+    onWebsocketMessage(event: MessageEvent): void {
       const data = JSON.parse(event.data);
       this.$EventBus.emit(data.type, data.data);
     },

@@ -1,199 +1,123 @@
 <template>
-  <div>
-    <PVToast />
-    <form @submit.prevent="handleSubmit(!v$.$invalid)">
-      <Card>
-        <template #title>Create Wireguard Tunnel</template>
-        <template #content>
-          <h3 class="card-section-header">Connection Type</h3>
-          <br/>
-          <div class="flex align-items-center card-section">
-            <RadioButton v-model="tunnelType" name="tunnelType" value="server" />
-            <label class="ml-2">Server - Provide a tunnel to another node</label>
-          </div>
-          <div class="flex align-items-center card-section">
-            <RadioButton v-model="tunnelType" name="tunnelType" value="client" />
-            <label class="ml-2">Client - Connect to another node's tunnel</label>
-          </div>
-          <br />
-          <h3 class="card-section-header">Connection Settings</h3>
-          <br/>
-          <div class="card-section" v-if="tunnelType == 'server'">
-            <span class="p-float-label">
-              <InputText
+  <div class="max-w-2xl mx-auto">
+    <Card>
+      <CardHeader>
+        <CardTitle>Create Wireguard Tunnel</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form class="space-y-6" @submit.prevent="handleSubmit(!v$.$invalid)">
+          <section class="space-y-3">
+            <h3 class="text-sm font-semibold">Connection Type</h3>
+            <div class="space-y-2">
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  v-model="tunnelType"
+                  type="radio"
+                  name="tunnelType"
+                  value="server"
+                  class="h-4 w-4"
+                />
+                <span>Server - Provide a tunnel to another node</span>
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  v-model="tunnelType"
+                  type="radio"
+                  name="tunnelType"
+                  value="client"
+                  class="h-4 w-4"
+                />
+                <span>Client - Connect to another node's tunnel</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="space-y-4">
+            <h3 class="text-sm font-semibold">Connection Settings</h3>
+
+            <div v-if="tunnelType === 'server'" class="space-y-1">
+              <label for="hostname" class="text-sm font-medium">Hostname</label>
+              <input
                 id="hostname"
-                type="text"
                 v-model="v$.hostname.$model"
-                :class="{
-                  'p-invalid': v$.hostname.$invalid && submitted,
-                }"
-              />
-              <label
-                for="hostname"
-                :class="{ 'p-error': v$.hostname.$invalid && submitted }"
-                >Hostname</label
-              >
-            </span>
-            <span v-if="v$.hostname.$error && submitted">
-              <span v-for="(error, index) of v$.hostname.$errors" :key="index">
-                <small class="p-error">{{ error.$message }}</small>
-                <br />
-              </span>
-            </span>
-            <span v-else>
-              <small
-                v-if="
-                  (v$.hostname.$invalid && submitted) ||
-                  v$.hostname.$pending.$response
-                "
-                class="p-error"
-                >{{ v$.hostname.required.$message }}
-                <br />
-              </small>
-            </span>
-            <br />
-          </div>
-          <div class="card-section" v-if="tunnelType == 'client'">
-            <span class="p-float-label">
-              <InputText
-                id="server"
                 type="text"
-                v-model="v$.server.$model"
-                :class="{
-                  'p-invalid': v$.server.$invalid && submitted,
-                }"
+                class="w-full rounded-md border px-3 py-2 text-sm"
+                :aria-invalid="v$.hostname.$invalid && submitted"
               />
-              <label
-                for="server"
-                :class="{ 'p-error': v$.server.$invalid && submitted }"
-                >Server Address</label
-              >
-            </span>
-            <span v-if="v$.server.$error && submitted">
-              <span v-for="(error, index) of v$.server.$errors" :key="index">
-                <small class="p-error">{{ error.$message }}</small>
-                <br />
-              </span>
-            </span>
-            <span v-else>
-              <small
-                v-if="
-                  (v$.server.$invalid && submitted) ||
-                  v$.server.$pending.$response
-                "
-                class="p-error"
-                >{{ v$.server.required.$message }}
-                <br />
-              </small>
-            </span>
-            <br />
-            <span class="p-float-label">
-              <InputText
-                id="network"
-                type="text"
-                v-model="v$.network.$model"
-                :class="{
-                  'p-invalid': v$.network.$invalid && submitted,
-                }"
-              />
-              <label
-                for="network"
-                :class="{ 'p-error': v$.network.$invalid && submitted }"
-                >Network</label
-              >
-            </span>
-            <span v-if="v$.network.$error && submitted">
-              <span v-for="(error, index) of v$.network.$errors" :key="index">
-                <small class="p-error">{{ error.$message }}</small>
-                <br />
-              </span>
-            </span>
-            <span v-else>
-              <small
-                v-if="
-                  (v$.network.$invalid && submitted) ||
-                  v$.network.$pending.$response
-                "
-                class="p-error"
-                >{{ v$.network.required.$message }}
-                <br />
-              </small>
-            </span>
-            <br />
-          </div>
-          <div class="card-section">
-            <span class="p-float-label" v-if="tunnelType=='client'">
-              <InputText
-                id="password"
-                type="password"
-                v-model="v$.password.$model"
-                :class="{
-                  'p-invalid': v$.password.$invalid && submitted,
-                }"
-              />
-              <label
-                for="password"
-                :class="{ 'p-error': v$.password.$invalid && submitted }"
-                >Key</label
-              >
-            </span>
-            <span v-if="v$.password.$error && submitted">
-              <span v-for="(error, index) of v$.password.$errors" :key="index">
-                <small class="p-error">{{ error.$message }}</small>
-                <br />
-              </span>
-            </span>
-            <span v-else>
-              <small
-                v-if="
-                  !generatePassword &&
-                  ((v$.password.$invalid && submitted) ||
-                  v$.password.$pending.$response)
-                "
-                class="p-error"
-                >{{ v$.password.required.$message }}
-                <br />
-              </small>
-            <br />
-            </span>
-          </div>
-        </template>
-        <template #footer>
-          <div class="card-footer">
-            <PVButton
-              class="p-button-raised p-button-rounded"
-              icon="pi pi-user"
-              type="submit"
-              label="Submit"
-            />
-          </div>
-        </template>
-      </Card>
-    </form>
+              <p v-if="v$.hostname.$error && submitted" class="text-xs text-red-600">
+                Hostname is required (3-63 chars, alphanumeric or -).
+              </p>
+            </div>
+
+            <div v-if="tunnelType === 'client'" class="space-y-4">
+              <div class="space-y-1">
+                <label for="server" class="text-sm font-medium">Server Address</label>
+                <input
+                  id="server"
+                  v-model="v$.server.$model"
+                  type="text"
+                  class="w-full rounded-md border px-3 py-2 text-sm"
+                  :aria-invalid="v$.server.$invalid && submitted"
+                />
+                <p v-if="v$.server.$error && submitted" class="text-xs text-red-600">Server is required.</p>
+              </div>
+
+              <div class="space-y-1">
+                <label for="network" class="text-sm font-medium">Network (hostname:port)</label>
+                <input
+                  id="network"
+                  v-model="v$.network.$model"
+                  type="text"
+                  class="w-full rounded-md border px-3 py-2 text-sm"
+                  :aria-invalid="v$.network.$invalid && submitted"
+                />
+                <p v-if="v$.network.$error && submitted" class="text-xs text-red-600">Network is required.</p>
+              </div>
+
+              <div class="space-y-1">
+                <label for="password" class="text-sm font-medium">Key</label>
+                <input
+                  id="password"
+                  v-model="v$.password.$model"
+                  type="password"
+                  class="w-full rounded-md border px-3 py-2 text-sm"
+                  :aria-invalid="v$.password.$invalid && submitted"
+                />
+                <p v-if="v$.password.$error && submitted" class="text-xs text-red-600">Key is required.</p>
+              </div>
+            </div>
+          </section>
+
+          <UiButton type="submit" class="w-full">Submit</UiButton>
+        </form>
+      </CardContent>
+    </Card>
   </div>
 </template>
 
-<script>
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import Card from 'primevue/card';
-import RadioButton from 'primevue/radiobutton';
+<script lang="ts">
 import API from '@/services/API';
 
 import { useVuelidate } from '@vuelidate/core';
-import { required, requiredIf, minLength, maxLength } from '@vuelidate/validators';
+import { requiredIf, minLength, maxLength } from '@vuelidate/validators';
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button as UiButton } from '@/components/ui/button';
 
 export default {
   components: {
-    InputText,
-    PVButton: Button,
-    RadioButton,
     Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    UiButton,
   },
   setup: () => ({ v$: useVuelidate() }),
-  created() {
-  },
-  mounted() {},
   data: function() {
     return {
       hostname: '',
@@ -212,8 +136,8 @@ export default {
         maxLength: maxLength(63),
       },
       password: {
-        required: required,
-        minLength: minLength(44*3),
+        required: requiredIf(this.tunnelType == 'client'),
+        minLength: minLength(44 * 3),
       },
       server: {
         required: requiredIf(this.tunnelType == 'client'),
@@ -225,53 +149,37 @@ export default {
     };
   },
   methods: {
-    handleSubmit(isFormValid) {
+    handleSubmit(isFormValid: boolean) {
       this.submitted = true;
       if (!isFormValid && this.v$.$errors.length > 0) {
         return;
       }
 
       if (this.tunnelType == 'client') {
-        // parse server address as a hostname and optional port
         const networkParts = this.network.split(':');
         if (networkParts.length !== 2) {
-          this.$toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Network must be in the format hostname:port',
-            life: 3000,
-          });
+          alert('Network must be in the format hostname:port');
           return;
         }
 
         if (networkParts[0].length > 253) {
-          this.$toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Network must be less than 254 characters',
-            life: 3000,
-          });
+          alert('Network must be less than 254 characters');
           return;
         }
 
-        if (!/^[A-Za-z0-9-\\.]+$/.test(networkParts[0])) {
-          this.$toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Network hostname must be alphanumeric, \'.\', or \'-\'',
-            life: 3000,
-          });
+        if (!/^[A-Za-z0-9-.]+$/.test(networkParts[0])) {
+          alert("Network hostname must be alphanumeric, '.', or '-'");
           return;
         }
 
         if (networkParts.length == 2) {
-          if (networkParts[1] < 1 || networkParts[1] > 65535) {
-            this.$toast.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: 'Network port must be between 1 and 65535',
-              life: 3000,
-            });
+          const port = parseInt(networkParts[1], 10);
+          if (isNaN(port)) {
+            alert('Network port must be a number');
+            return;
+          }
+          if (port < 1 || port > 65535) {
+            alert('Network port must be between 1 and 65535');
             return;
           }
         }
@@ -284,60 +192,27 @@ export default {
           wireguard: true,
         })
           .then((res) => {
-            this.$toast.add({
-              severity: 'success',
-              summary: 'Success',
-              detail: res.data.message,
-              life: 3000,
-            });
+            alert(res.data.message || 'Tunnel created');
             this.$router.push('/admin/tunnels');
           })
           .catch((err) => {
             console.error(err);
-            if (err.response && err.response.data && err.response.data.error) {
-              this.$toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: err.response.data.error,
-                life: 3000,
-              });
-            } else {
-              this.$toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'An unknown error occurred',
-                life: 3000,
-              });
-            }
+            const message = err?.response?.data?.error || 'An unknown error occurred';
+            alert(message);
           });
       } else if (this.tunnelType == 'server') {
         if (this.hostname.length > 63) {
-          this.$toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Hostname must be less than 64 characters',
-            life: 3000,
-          });
+          alert('Hostname must be less than 64 characters');
           return;
         }
 
         if (!/^[A-Za-z0-9-]+$/.test(this.hostname)) {
-          this.$toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Hostname must be alphanumeric or -',
-            life: 3000,
-          });
+          alert('Hostname must be alphanumeric or -');
           return;
         }
 
         if (this.hostname.length < 3) {
-          this.$toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Hostname must be at least 3 characters',
-            life: 3000,
-          });
+          alert('Hostname must be at least 3 characters');
           return;
         }
 
@@ -347,31 +222,13 @@ export default {
           wireguard: true,
         })
           .then((res) => {
-            this.$toast.add({
-              severity: 'success',
-              summary: 'Success',
-              detail: res.data.message,
-              life: 3000,
-            });
+            alert(res.data.message || 'Tunnel created');
             this.$router.push('/admin/tunnels');
           })
           .catch((err) => {
             console.error(err);
-            if (err.response && err.response.data && err.response.data.error) {
-              this.$toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: err.response.data.error,
-                life: 3000,
-              });
-            } else {
-              this.$toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'An unknown error occurred',
-                life: 3000,
-              });
-            }
+            const message = err?.response?.data?.error || 'An unknown error occurred';
+            alert(message);
           });
       }
     },

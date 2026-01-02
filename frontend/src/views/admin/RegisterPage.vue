@@ -1,145 +1,77 @@
 <template>
-  <div>
-    <PVToast />
-    <form @submit.prevent="handleRegister(!v$.$invalid)">
-      <Card>
-        <template #title>Register</template>
-        <template #content>
-          <span class="p-float-label">
-            <InputText
+  <div class="max-w-lg mx-auto">
+    <Card>
+      <CardHeader>
+        <CardTitle>Register</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form class="space-y-4" @submit.prevent="handleRegister(!v$.$invalid)">
+          <div class="space-y-1">
+            <label for="username" class="text-sm font-medium">Username</label>
+            <input
               id="username"
-              type="text"
               v-model="v$.username.$model"
-              :class="{
-                'p-invalid': v$.username.$invalid && submitted,
-              }"
+              type="text"
+              class="w-full rounded-md border px-3 py-2 text-sm"
+              :aria-invalid="v$.username.$invalid && submitted"
             />
-            <label
-              for="username"
-              :class="{ 'p-error': v$.username.$invalid && submitted }"
-              >Username</label
-            >
-          </span>
-          <span v-if="v$.username.$error && submitted">
-            <span v-for="(error, index) of v$.username.$errors" :key="index">
-              <small class="p-error">{{ error.$message }}</small>
-              <br />
-            </span>
-          </span>
-          <span v-else>
-            <small
-              v-if="
-                (v$.username.$invalid && submitted) ||
-                v$.username.$pending.$response
-              "
-              class="p-error"
-              >{{ v$.username.required.$message }}
-              <br />
-            </small>
-          </span>
-          <br />
-          <span class="p-float-label">
-            <InputText
-              id="password"
-              type="password"
-              v-model="v$.password.$model"
-              :class="{
-                'p-invalid': v$.password.$invalid && submitted,
-              }"
-            />
-            <label
-              for="password"
-              :class="{ 'p-error': v$.password.$invalid && submitted }"
-              >Password</label
-            >
-          </span>
-          <span v-if="v$.password.$error && submitted">
-            <span v-for="(error, index) of v$.password.$errors" :key="index">
-              <small class="p-error">{{ error.$message }}</small>
-              <br />
-            </span>
-          </span>
-          <span v-else>
-            <small
-              v-if="
-                (v$.password.$invalid && submitted) ||
-                v$.password.$pending.$response
-              "
-              class="p-error"
-              >{{ v$.password.required.$message }}
-              <br />
-            </small>
-          </span>
-          <br />
-          <span class="p-float-label">
-            <InputText
-              id="confirmPassword"
-              type="password"
-              v-model="v$.confirmPassword.$model"
-              :class="{
-                'p-invalid': v$.confirmPassword.$invalid && submitted,
-              }"
-            />
-            <label
-              for="confirmPassword"
-              :class="{ 'p-error': v$.confirmPassword.$invalid && submitted }"
-              >Confirm Password</label
-            >
-          </span>
-          <span v-if="v$.confirmPassword.$error && submitted">
-            <span
-              v-for="(error, index) of v$.confirmPassword.$errors"
-              :key="index"
-            >
-              <small class="p-error">{{ error.$message }}</small>
-              <br />
-            </span>
-          </span>
-          <span v-else>
-            <small
-              v-if="
-                (v$.confirmPassword.$invalid && submitted) ||
-                v$.confirmPassword.$pending.$response
-              "
-              class="p-error"
-              >{{ v$.confirmPassword.required.$message }}
-              <br />
-            </small>
-          </span>
-        </template>
-        <template #footer>
-          <div class="card-footer">
-            <PVButton
-              class="p-button-raised p-button-rounded"
-              icon="pi pi-user"
-              type="submit"
-              label="Register"
-            />
+            <p v-if="v$.username.$error && submitted" class="text-xs text-red-600">Username is required.</p>
           </div>
-        </template>
-      </Card>
-    </form>
+
+          <div class="space-y-1">
+            <label for="password" class="text-sm font-medium">Password</label>
+            <input
+              id="password"
+              v-model="v$.password.$model"
+              type="password"
+              class="w-full rounded-md border px-3 py-2 text-sm"
+              :aria-invalid="v$.password.$invalid && submitted"
+            />
+            <p v-if="v$.password.$error && submitted" class="text-xs text-red-600">Password is required.</p>
+          </div>
+
+          <div class="space-y-1">
+            <label for="confirmPassword" class="text-sm font-medium">Confirm Password</label>
+            <input
+              id="confirmPassword"
+              v-model="v$.confirmPassword.$model"
+              type="password"
+              class="w-full rounded-md border px-3 py-2 text-sm"
+              :aria-invalid="v$.confirmPassword.$invalid && submitted"
+            />
+            <p v-if="v$.confirmPassword.$error && submitted" class="text-xs text-red-600">Passwords must match.</p>
+          </div>
+
+          <UiButton type="submit" class="w-full">Register</UiButton>
+        </form>
+      </CardContent>
+    </Card>
   </div>
 </template>
 
-<script>
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import Card from 'primevue/card';
+<script lang="ts">
 import API from '@/services/API';
 
 import { useVuelidate } from '@vuelidate/core';
 import { required, sameAs } from '@vuelidate/validators';
 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button as UiButton } from '@/components/ui/button';
+
 export default {
   components: {
-    InputText,
-    PVButton: Button,
     Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    UiButton,
   },
   setup: () => ({ v$: useVuelidate() }),
-  created() {},
-  mounted() {},
   data: function() {
     return {
       username: '',
@@ -163,19 +95,14 @@ export default {
     };
   },
   methods: {
-    handleRegister(isFormValid) {
+    handleRegister(isFormValid: boolean) {
       this.submitted = true;
       if (!isFormValid) {
         return;
       }
 
       if (this.confirmPassword != this.password) {
-        this.$toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: `Passwords do not match`,
-          life: 3000,
-        });
+        alert('Passwords do not match');
         return;
       }
       API.post('/users', {
@@ -183,31 +110,13 @@ export default {
         password: this.password.trim(),
       })
         .then((res) => {
-          this.$toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: res.data.message,
-            life: 3000,
-          });
+          alert(res.data.message || 'User created');
           this.$router.push('/admin/users');
         })
         .catch((err) => {
           console.error(err);
-          if (err.response && err.response.data && err.response.data.error) {
-            this.$toast.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: err.response.data.error,
-              life: 3000,
-            });
-          } else {
-            this.$toast.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: 'An unknown error occurred',
-              life: 3000,
-            });
-          }
+          const message = err?.response?.data?.error || 'An unknown error occurred';
+          alert(message);
         });
     },
   },

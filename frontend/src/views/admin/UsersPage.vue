@@ -1,33 +1,33 @@
 <template>
   <div>
-    <PVToast />
-    <ConfirmDialog></ConfirmDialog>
     <Card>
-      <template #title>Manage Admins</template>
-      <template #content>
+      <CardHeader>
+        <CardTitle>Manage Admins</CardTitle>
+      </CardHeader>
+      <CardContent>
         <UserTable />
-      </template>
+      </CardContent>
     </Card>
   </div>
 </template>
 
-<script>
-import Card from 'primevue/card';
+<script lang="ts">
 import UserTable from '@/components/UserTable.vue';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 export default {
   components: {
     Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
     UserTable,
   },
-  created() {},
-  mounted() {},
-  unmounted() {},
-  data: function() {
-    return {};
-  },
-  methods: {},
-  computed: {},
 };
 </script>
 

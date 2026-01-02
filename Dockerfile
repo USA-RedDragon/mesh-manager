@@ -9,25 +9,11 @@ COPY frontend/. .
 
 ENV NODE_ENV=production
 
-RUN npm run build -- --base=/a/
-
-FROM node:24.12.0-alpine@sha256:c921b97d4b74f51744057454b306b418cf693865e73b8100559189605f6955b8 AS new-frontend-build
-
-WORKDIR /app
-
-COPY new-frontend/package.json new-frontend/package-lock.json ./
-RUN npm ci --ignore-scripts
-
-COPY new-frontend/. .
-
-ENV NODE_ENV=production
-
-RUN npm run build -- --base=/b/
+RUN npm run build
 
 FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:ecd2d6343483d01d522f5db304459adaa1f3212436662a22aeb15bebdcb5c43f
 
 COPY --from=frontend-build /app/dist /www
-COPY --from=new-frontend-build /app/dist /new-www
 COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:fb126c105899d35cc7caa4278557e07e6fbd8703c27ee6b7e215ed5dedaf6dc7 /usr/share/nginx/html /meshmap
 
 RUN apk add --no-cache \
