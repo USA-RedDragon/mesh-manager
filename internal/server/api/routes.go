@@ -15,7 +15,7 @@ import (
 )
 
 const rateLimitRate = 5 * time.Second
-const rateLimitLimit = 100
+const rateLimitLimit = 300
 
 // ApplyRoutes to the HTTP Mux.
 func ApplyRoutes(router *gin.Engine, eventsChannel chan events.Event, config *config.Config) {
