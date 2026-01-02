@@ -382,6 +382,8 @@ func (s *Service) updateNeighbors(ctx context.Context) {
 				if rtt, err := strconv.ParseFloat(rttMatches[1], 64); err == nil {
 					tracker.RTT = &rtt
 				}
+			} else {
+				tracker.RTT = nil
 			}
 		} else {
 			slog.Info("LQM: Failed to match neighbor line", "line", line)
@@ -699,7 +701,9 @@ func (s *Service) pingTracker(ctx context.Context, t *Tracker) {
 	}
 
 	if t.PingQuality == 0 {
-		t.PingQuality = 100
+		if success {
+			t.PingQuality = 100
+		}
 	} else {
 		t.PingQuality++
 	}
