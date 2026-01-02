@@ -191,17 +191,24 @@ func GETTunnelLQM(c *gin.Context) {
 		return
 	}
 
-	quality := tracker.Quality
-	if quality < 0 {
-		quality = 0
-	}
-	if quality > 100 {
-		quality = 100
-	}
+	var quality *int
+	var errorsPct *int
 
-	errorsPct := 100 - quality
-	if errorsPct < 0 {
-		errorsPct = 0
+	if tracker.Quality != nil {
+		q := *tracker.Quality
+		if q < 0 {
+			q = 0
+		}
+		if q > 100 {
+			q = 100
+		}
+		quality = &q
+
+		e := 100 - q
+		if e < 0 {
+			e = 0
+		}
+		errorsPct = &e
 	}
 
 	response := apimodels.TunnelLQMResponse{

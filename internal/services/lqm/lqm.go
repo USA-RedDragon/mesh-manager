@@ -88,7 +88,7 @@ type Tracker struct {
 	TxQuality          float64      `json:"tx_quality"`
 	PingQuality        int          `json:"ping_quality"`
 	PingSuccessTime    float64      `json:"ping_success_time"`
-	Quality            int          `json:"quality"`
+	Quality            *int         `json:"quality"`
 	Hostname           string       `json:"hostname"`
 	CanonicalIP        string       `json:"canonical_ip"`
 	IP                 string       `json:"ip"`
@@ -729,17 +729,20 @@ func (s *Service) calculateQuality(t *Tracker) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	var q int
 	switch {
 	case t.TxQuality > 0:
 		if t.PingQuality > 0 {
-			t.Quality = int(math.Round((t.TxQuality + float64(t.PingQuality)) / 2))
+			q = int(math.Round((t.TxQuality + float64(t.PingQuality)) / 2))
 		} else {
-			t.Quality = int(math.Round(t.TxQuality))
+			q = int(math.Round(t.TxQuality))
 		}
+		t.Quality = &q
 	case t.PingQuality > 0:
-		t.Quality = int(math.Round(float64(t.PingQuality)))
+		q = int(math.Round(float64(t.PingQuality)))
+		t.Quality = &q
 	default:
-		t.Quality = 0
+		t.Quality = nil
 	}
 }
 
