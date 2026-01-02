@@ -67,16 +67,17 @@ export default {
           console.error(err);
         });
     },
-    handleAdminToggle(event) {
-      this.adminMenuOpen = event.target?.open ?? false;
+    handleAdminToggle(event: Event) {
+      const target = event.target as HTMLDetailsElement | null;
+      this.adminMenuOpen = target?.open ?? false;
     },
     handleAdminNavigate() {
       this.adminMenuOpen = false;
     },
-    handleOutsideClick(event) {
-      const menu = this.$refs.adminMenu;
+    handleOutsideClick(event: MouseEvent) {
+      const menu = this.$refs.adminMenu as HTMLDetailsElement | undefined;
       if (!menu) return;
-      if (menu.contains(event.target)) return;
+      if (menu.contains(event.target as Node)) return;
       this.adminMenuOpen = false;
     },
   },
