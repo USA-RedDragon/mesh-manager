@@ -44,13 +44,13 @@ type TunnelWithPass struct {
 }
 
 type TunnelLQMResponse struct {
-	ID        uint    `json:"id"`
-	IP        string  `json:"ip,omitempty"`
-	Hostname  string  `json:"hostname,omitempty"`
-	RXQuality int     `json:"rx_quality"`
-	Quality   int     `json:"quality"`
-	RTT       float64 `json:"rtt"`
-	Errors    int     `json:"errors"`
+	ID        uint     `json:"id"`
+	IP        string   `json:"ip,omitempty"`
+	Hostname  string   `json:"hostname,omitempty"`
+	RXQuality int      `json:"rx_quality"`
+	Quality   int      `json:"quality"`
+	RTT       *float64 `json:"rtt"`
+	Errors    int      `json:"errors"`
 }
 
 type EditTunnel struct {
