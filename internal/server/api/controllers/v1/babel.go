@@ -7,6 +7,7 @@ import (
 
 	"github.com/USA-RedDragon/mesh-manager/internal/server/api/middleware"
 	"github.com/USA-RedDragon/mesh-manager/internal/services"
+	"github.com/USA-RedDragon/mesh-manager/internal/services/babel"
 	"github.com/gin-gonic/gin"
 )
 
@@ -102,4 +103,29 @@ func GETBabelRunning(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"running": babelService.IsRunning()})
+}
+
+// GETBabelETX returns a map of destination IPv4 addresses to their Babel ETX metrics.
+// The metrics are derived from the installed routes and filtered to exclude unreachable entries (metric 65535).
+func GETBabelETX(c *gin.Context) {
+	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
+	if !ok {
+		slog.Error("Unable to get dependencies from context")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		return
+	}
+
+	if !di.Config.Babel.Enabled {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Babel is disabled"})
+		return
+	}
+
+	etxByIP, err := babel.FetchInstalledRouteMetrics(c.Request.Context())
+	if err != nil {
+		slog.Error("GETBabelETX: Failed to query Babel", "error", err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Failed to query Babel"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"etx": etxByIP})
 }

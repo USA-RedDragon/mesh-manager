@@ -87,6 +87,7 @@ func v1(group *gin.RouterGroup, config *config.Config) {
 		v1Babel.GET("/hosts", v1Controllers.GETBabelHosts)
 		v1Babel.GET("/hosts/count", v1Controllers.GETBabelHostsCount)
 		v1Babel.GET("/running", v1Controllers.GETBabelRunning)
+		v1Babel.GET("/etx", v1Controllers.GETBabelETX)
 	}
 
 	v1Wireguard := group.Group("/wireguard")

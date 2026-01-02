@@ -18,6 +18,7 @@ interface NodeNoChildren {
   hostname: string
   ip: string
   services: Service[]
+  etx?: number | null
 }
 
 interface Node {
@@ -25,6 +26,7 @@ interface Node {
   ip: string
   services: Service[]
   children: NodeNoChildren[]
+  etx?: number | null
 }
 
 const columns: ColumnDef<Node>[] = [
@@ -45,6 +47,18 @@ const columns: ColumnDef<Node>[] = [
     header: () => h('div', {  }, 'IP'),
     cell: ({ row }) => {
       return h('p', { }, row.getValue('ip'))
+    },
+  },
+  {
+    accessorKey: 'etx',
+    header: () => h('div', {  }, 'ETX'),
+    cell: ({ row }) => {
+      const value = row.getValue('etx') as number | null | undefined
+      if (value === null || value === undefined) {
+        return h('span', { }, '—')
+      }
+      const formatted = (value / 256).toFixed(2)
+      return h('span', { }, formatted)
     },
   },
   {
@@ -100,67 +114,114 @@ const props = defineProps<{
   babel?: boolean
 }>()
 
-async function fetchData(page=1, pageSize=10) {
-  loading.value = true;
-  limit.value = pageSize;
-  const api = props.babel ? '/babel' : '/olsr';
+function ipv4ToInt(ip: string): number | null {
+  const parts = ip.split('.').map((p) => Number(p))
+  if (parts.length !== 4 || parts.some((p) => Number.isNaN(p) || p < 0 || p > 255)) return null
+  return (((parts[0] << 24) >>> 0) | ((parts[1] << 16) >>> 0) | ((parts[2] << 8) >>> 0) | (parts[3] >>> 0)) >>> 0
+}
 
-  API.get(`${api}/hosts/count`)
-    .then((res) => {
-      nodesCount.value = res.data.nodes;
-      devicesCount.value = res.data.total;
-    })
-    .catch((err) => {
-      console.error(err);
-    });
+function parseCIDR(cidr: string): { prefix: number; length: number } | null {
+  const [ipPart, lenPart] = cidr.split('/')
+  const length = Number(lenPart)
+  if (Number.isNaN(length) || length < 0 || length > 32) return null
+  const ipInt = ipv4ToInt(ipPart)
+  if (ipInt === null) return null
+  return { prefix: ipInt, length }
+}
 
-  const params = [`page=${page}`, `limit=${pageSize}`];
-  if (search.value) {
-    params.push(`filter=${encodeURIComponent(search.value.trim())}`);
+function etxForIp(ip: string, etxMap: Record<string, number>): number | null {
+  const ipInt = ipv4ToInt(ip)
+  if (ipInt === null) return null
+
+  let bestLen = -1
+  let bestMetric: number | null = null
+
+  for (const [cidr, metric] of Object.entries(etxMap)) {
+    const parsed = parseCIDR(cidr)
+    if (!parsed) continue
+
+    const mask = parsed.length === 0 ? 0 : ((0xffffffff << (32 - parsed.length)) >>> 0)
+    if ((ipInt & mask) === (parsed.prefix & mask)) {
+      if (parsed.length > bestLen || (parsed.length === bestLen && bestMetric !== null && metric < bestMetric)) {
+        bestLen = parsed.length
+        bestMetric = metric
+      }
+    }
   }
 
-  API.get(`${api}/hosts?${params.join('&')}`)
-    .then((res) => {
-      if (!res.data.nodes) {
-        res.data.nodes = [];
+  return bestMetric
+}
+
+async function fetchData(page = 1, pageSize = 10) {
+  loading.value = true
+  limit.value = pageSize
+  const api = props.babel ? '/babel' : '/olsr'
+
+  const params = [`page=${page}`, `limit=${pageSize}`]
+  if (search.value) {
+    params.push(`filter=${encodeURIComponent(search.value.trim())}`)
+  }
+
+  try {
+    const countPromise = API.get(`${api}/hosts/count`)
+    const hostsPromise = API.get(`${api}/hosts?${params.join('&')}`)
+    const etxPromise = props.babel ? API.get(`${api}/etx`) : null
+
+    const [countRes, hostsRes, etxRes] = await Promise.all([
+      countPromise,
+      hostsPromise,
+      etxPromise ?? Promise.resolve(null),
+    ])
+
+    nodesCount.value = countRes.data.nodes
+    devicesCount.value = countRes.data.total
+
+    const etxMap: Record<string, number> = etxRes?.data?.etx ?? {}
+
+    const nodes = hostsRes.data.nodes || []
+
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+
+      node.etx = etxForIp(node.ip, etxMap)
+
+      if (node.services != null) {
+        for (let j = 0; j < node.services.length; j++) {
+          const service = node.services[j]
+          const url = new URL(service.url)
+          url.hostname = url.hostname + '.local.mesh'
+          service.url = url.toString()
+          node.services[j] = service
+        }
       }
 
-      // Iterate through each node's services and each node's child's services
-      // and make them a new URL()
-      for (let i = 0; i < res.data.nodes.length; i++) {
-        const node = res.data.nodes[i];
-        if (node.services != null) {
-          for (let j = 0; j < node.services.length; j++) {
-            const service = node.services[j];
-            service.url = new URL(service.url);
-            service.url.hostname = service.url.hostname + '.local.mesh';
-            node.services[j] = service;
-          }
-        }
-        if (node.children != null) {
-          for (let j = 0; j < node.children.length; j++) {
-            const child = node.children[j];
-            if (child.services != null) {
-              for (let k = 0; k < child.services.length; k++) {
-                const service = child.services[k];
-                service.url = new URL(service.url);
-                service.url.hostname = service.url.hostname + '.local.mesh';
-                child.services[k] = service;
-              }
+      if (node.children != null) {
+        for (let j = 0; j < node.children.length; j++) {
+          const child = node.children[j]
+          if (child.services != null) {
+            for (let k = 0; k < child.services.length; k++) {
+              const service = child.services[k]
+              const url = new URL(service.url)
+              url.hostname = url.hostname + '.local.mesh'
+              service.url = url.toString()
+              child.services[k] = service
             }
-            node.children[j] = child;
           }
+          node.children[j] = child
         }
-        res.data.nodes[i] = node;
       }
 
-      data.value = res.data.nodes;
-      totalRecords.value = res.data.total;
-      loading.value = false;
-    })
-    .catch((err) => {
-      console.error(err);
-    });
+      nodes[i] = node
+    }
+
+    data.value = nodes
+    totalRecords.value = hostsRes.data.total
+  } catch (_err) {
+    // Errors are logged to console; UI will just omit ETX/rows on failure
+    console.error(_err)
+  } finally {
+    loading.value = false
+  }
 }
 
 function onSearch() {
