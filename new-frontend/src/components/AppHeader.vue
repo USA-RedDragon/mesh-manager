@@ -62,30 +62,31 @@ export default {
 
 <style scoped>
 header {
-  height: 3em;
-  padding: 0.5em;
-  margin: auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin: auto;
   width: 100%;
   background-color: var(--secondary);
 }
 
 header h1,
-header nav,
-.button {
-  font-size: 1rem;
-  width: 33%;
-}
-
-.button {
-  text-align: right;
-}
-
-header h1,
 header nav {
   display: inline;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  flex: 0 0 auto;
+}
+
+.button {
+  flex: 0 0 auto;
+  text-align: right;
 }
 
 header nav .router-link-active,
@@ -95,27 +96,31 @@ header nav .router-link-active,
 }
 
 nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 300px;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   text-align: center;
 }
 
 nav a {
-  padding: 0 1rem;
-  border-left: 1px solid #444;
-}
-
-nav a:first-of-type {
-  border: 0;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.375rem;
 }
 
 .admin-menu {
-  display: inline-block;
+  display: inline-flex;
   position: relative;
-  margin-left: 1rem;
+  margin-left: 0.25rem;
 }
 
 .admin-menu summary {
   list-style: none;
   cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.375rem;
 }
 
 .admin-menu summary::-webkit-details-marker {
@@ -139,5 +144,23 @@ nav a:first-of-type {
 .admin-menu[open] summary {
   color: var(--secondary-foreground);
   font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  nav {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .button {
+    width: 100%;
+    text-align: left;
+  }
 }
 </style>
