@@ -81,7 +81,7 @@ func FetchInstalledRouteMetrics(ctx context.Context) (map[string]int, error) {
 		return nil, fmt.Errorf("failed to write command: %w", err)
 	}
 
-	routeRegex := regexp.MustCompile(`^add route .+ prefix ([^ /]+)/([0-9]+) .* installed yes .* metric ([0-9]+)`) // keep spacing to mirror babel output
+	routeRegex := regexp.MustCompile(`^add route .* prefix ([^ /]+)(?:/([0-9]+))?.* installed yes .*\bmetric ([0-9]+)\b`)
 	etxByPrefix := make(map[string]int)
 
 	for scanner.Scan() {
@@ -104,7 +104,12 @@ func FetchInstalledRouteMetrics(ctx context.Context) (map[string]int, error) {
 			continue
 		}
 
-		cidr := matches[1] + "/" + matches[2]
+		mask := matches[2]
+		if mask == "" {
+			mask = "32"
+		}
+
+		cidr := matches[1] + "/" + mask
 		ip, netw, err := net.ParseCIDR(cidr)
 		if err != nil || ip == nil || ip.To4() == nil || netw == nil {
 			continue
