@@ -157,11 +157,6 @@ const columns = computed<ColumnDef<Tunnel>[]>(() => {
         ])
       },
     },
-    {
-      accessorKey: 'wireguard_port',
-      header: () => h('span', 'Wireguard Port'),
-      cell: ({ row }) => (row.original.wireguard ? h('span', row.original.wireguard_port ?? '-') : h('span', '-')),
-    },
   ]
 
   const adminOnly: ColumnDef<Tunnel>[] = [
@@ -184,6 +179,11 @@ const columns = computed<ColumnDef<Tunnel>[]>(() => {
         }
         return h(ClickToCopy, { copy: row.original.password || '' })
       },
+    },
+    {
+      accessorKey: 'wireguard_port',
+      header: () => h('span', 'Wireguard Port'),
+      cell: ({ row }) => (row.original.wireguard ? h('span', row.original.wireguard_port ?? '-') : h('span', '-')),
     },
     {
       accessorKey: 'created_at',
