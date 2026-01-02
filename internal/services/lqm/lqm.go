@@ -75,7 +75,7 @@ type Tracker struct {
 	AvgLQ              float64      `json:"avg_lq"`
 	RxCost             int          `json:"rxcost"`
 	TxCost             int          `json:"txcost"`
-	RTT                int          `json:"rtt"`
+	RTT                float64      `json:"rtt"`
 	TxPackets          uint64       `json:"tx_packets"`
 	TxFail             uint64       `json:"tx_fail"`
 	TxRetries          uint64       `json:"-"`
@@ -379,7 +379,7 @@ func (s *Service) updateNeighbors(ctx context.Context) {
 
 			rttMatches := rttRegex.FindStringSubmatch(line)
 			if rttMatches != nil {
-				if rtt, err := strconv.Atoi(rttMatches[1]); err == nil {
+				if rtt, err := strconv.ParseFloat(rttMatches[1], 64); err == nil {
 					tracker.RTT = rtt
 				}
 			}
