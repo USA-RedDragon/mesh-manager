@@ -5,7 +5,7 @@ import {
   getCoreRowModel,
   useVueTable,
 } from '@tanstack/vue-table'
-import { toRefs, onMounted } from 'vue'
+import { toRefs, onMounted, ref } from 'vue'
 import DataTablePagination from './DataTablePagination.vue'
 
 import {
@@ -28,27 +28,41 @@ const props = defineProps<{
 
 const { data, rowCount, pageCount } = toRefs(props)
 
+const paginationState = ref({ pageIndex: 0, pageSize: 10 })
+
 const options: TableOptionsWithReactiveData<TData> = {
   get data() { return data.value },
   get columns() { return props.columns },
-  get pageCount() { return pageCount.value },
-  get rowCount() { return rowCount.value },
+  get pageCount() {
+    const fallback = Math.ceil(((rowCount.value ?? 0) || 0) / (paginationState.value.pageSize || 1)) || 1
+    return pageCount.value ?? fallback
+  },
+  get rowCount() { return rowCount.value ?? data.value.length },
   getCoreRowModel: getCoreRowModel(),
   manualPagination: props.pagination,
-  onPaginationChange: (updater) => {
-    if (typeof updater === 'function') {
-      const newState = updater(table.getState().pagination)
-      props.fetchData(newState.pageIndex + 1, newState.pageSize)
-    } else {
-      props.fetchData(updater.pageIndex + 1, updater.pageSize)
+  get state() {
+    return {
+      pagination: paginationState.value,
     }
+  },
+  onPaginationChange: (updater) => {
+    const nextState = typeof updater === 'function' ? updater(paginationState.value) : updater
+    paginationState.value = nextState
+    table.setOptions((prev) => ({
+      ...prev,
+      state: {
+        ...prev.state,
+        pagination: nextState,
+      },
+    }))
+    props.fetchData(nextState.pageIndex + 1, nextState.pageSize)
   },
 }
 
 const table = useVueTable(options)
 
 onMounted(() => {
-  props.fetchData(1, 10)
+  props.fetchData(paginationState.value.pageIndex + 1, paginationState.value.pageSize)
 })
 </script>
 

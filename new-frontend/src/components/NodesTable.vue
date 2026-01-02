@@ -33,7 +33,11 @@ const columns: ColumnDef<Node>[] = [
     header: () => h('div', {  }, 'Name'),
     cell: ({ row }) => {
       const hostname = row.getValue('hostname')
-      return h('a', { target: "_blank", href: `http://${hostname}.local.mesh` }, row.getValue('hostname'))
+      return h('a', {
+        target: "_blank",
+        href: `http://${hostname}.local.mesh`,
+        class: 'text-primary underline underline-offset-2 font-medium'
+      }, row.getValue('hostname'))
     },
   },
   {
@@ -70,7 +74,11 @@ const columns: ColumnDef<Node>[] = [
       }
       for (let i = 0; i < services.length; i++) {
         const service = services[i]
-        ret.push(h('a', { target: "_blank", href: service.url }, service.name))
+        ret.push(h('a', {
+          target: "_blank",
+          href: service.url,
+          class: 'text-primary underline underline-offset-2 font-medium'
+        }, service.name))
         if (i < services.length - 1) {
           ret.push(h('br', { }))
         }
@@ -92,7 +100,7 @@ const props = defineProps<{
   babel?: boolean
 }>()
 
-async function fetchData(page=0, pageSize=10) {
+async function fetchData(page=1, pageSize=10) {
   loading.value = true;
   limit.value = pageSize;
   const api = props.babel ? '/babel' : '/olsr';
@@ -108,7 +116,7 @@ async function fetchData(page=0, pageSize=10) {
 
   const params = [`page=${page}`, `limit=${pageSize}`];
   if (search.value) {
-    params.push(`filter=${encodeURIComponent(search.value)}`);
+    params.push(`filter=${encodeURIComponent(search.value.trim())}`);
   }
 
   API.get(`${api}/hosts?${params.join('&')}`)
@@ -156,16 +164,16 @@ async function fetchData(page=0, pageSize=10) {
 }
 
 function onSearch() {
-  fetchData(0, limit.value)
+  fetchData(1, limit.value)
 }
 
 function clearSearch() {
   search.value = ''
-  fetchData(0, limit.value)
+  fetchData(1, limit.value)
 }
 
 onMounted(() => {
-  fetchData()
+  fetchData(1, limit.value)
 })
 </script>
 

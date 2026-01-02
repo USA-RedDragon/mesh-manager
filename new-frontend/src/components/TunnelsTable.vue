@@ -208,7 +208,7 @@ async function fetchData(page = 1, limit = pageSize.value) {
   try {
     const params = [`page=${page}`, `limit=${limit}`, `admin=${props.admin ?? false}`, 'type=wireguard']
     if (search.value) {
-      params.push(`filter=${encodeURIComponent(search.value)}`)
+      params.push(`filter=${encodeURIComponent(search.value.trim())}`)
     }
     const res = await API.get(`/tunnels?${params.join('&')}`)
     const normalized: Tunnel[] = (res.data.tunnels || []).map((tunnel: Tunnel) => {
