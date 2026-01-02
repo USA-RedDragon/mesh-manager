@@ -1,19 +1,17 @@
 <template>
-  <span>
-    <PVButton
-      @click="copyToClipboard"
-      :label=text
-      :class="{
-        'click-to-copy': true,
-        'click-to-copy--copied': copied,
-      }"
-      text
-    />
-  </span>
+  <UiButton
+    variant="ghost"
+    size="sm"
+    class="click-to-copy"
+    :class="{ 'click-to-copy--copied': copied }"
+    @click="copyToClipboard"
+  >
+    <slot>{{ text }}</slot>
+  </UiButton>
 </template>
 
 <script lang="ts">
-import Button from 'primevue/button';
+import { Button as UiButton } from '@/components/ui/button';
 
 export default {
   props: {
@@ -27,41 +25,35 @@ export default {
     },
   },
   components: {
-    PVButton: Button,
+    UiButton,
   },
   data: function() {
     return {
       copied: false,
     };
   },
-  mounted() {
-  },
-  unmounted() {
-  },
   methods: {
     copyToClipboard() {
-      if ('navigator' in window && 'clipboard' in window.navigator) {
-        navigator.clipboard.writeText(this.copy).then(() => {
-          this.copied = true;
-          setTimeout(() => {
-            this.copied = false;
-          }, 1000);
-        });
-      } else {
-        const el = document.createElement('textarea');
-        el.value = this.copy;
-        document.body.appendChild(el);
-        el.select();
-        document.execCommand('copy');
-        document.body.removeChild(el);
+      const setCopied = () => {
         this.copied = true;
         setTimeout(() => {
           this.copied = false;
         }, 1000);
+      };
+
+      if ('navigator' in window && 'clipboard' in window.navigator) {
+        navigator.clipboard.writeText(this.copy).then(setCopied);
+        return;
       }
+
+      const el = document.createElement('textarea');
+      el.value = this.copy;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied();
     },
-  },
-  computed: {
   },
 };
 </script>

@@ -1,33 +1,33 @@
 <template>
   <div>
-    <PVToast />
-    <ConfirmDialog></ConfirmDialog>
     <Card>
-      <template #title>Tunnels</template>
-      <template #content>
+      <CardHeader>
+        <CardTitle>Tunnels</CardTitle>
+      </CardHeader>
+      <CardContent>
         <TunnelsTable admin />
-      </template>
+      </CardContent>
     </Card>
   </div>
 </template>
 
 <script lang="ts">
-import Card from 'primevue/card';
 import TunnelsTable from '@/components/TunnelsTable.vue';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 export default {
   components: {
     Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
     TunnelsTable,
   },
-  created() {},
-  mounted() {},
-  unmounted() {},
-  data: function() {
-    return {};
-  },
-  methods: {},
-  computed: {},
 };
 </script>
 

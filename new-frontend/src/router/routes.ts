@@ -23,6 +23,7 @@ export default [
     path: '/olsr',
     name: 'OLSR',
     component: () => import('../views/OLSRPage.vue'),
+    alias: '/nodes',
   },
   {
     path: '/babel',

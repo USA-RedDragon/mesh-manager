@@ -10,56 +10,13 @@
       <RouterLink to="/tunnels">Tunnels</RouterLink>
       <RouterLink v-if="hasMeshmap" to="/meshmap">Mesh Map</RouterLink>
 
-      <router-link
-        v-if="userStore.loggedIn"
-        to="#"
-        custom
-      >
-        <a
-          href="#"
-          @click="toggleAdminMenu"
-          :class="{
-            adminNavLink: true,
-            'router-link-active': $route.path.startsWith('/admin'),
-          }"
-          >Admin</a
-        >
-      </router-link>
-      <PVMenu
-        v-if="userStore.loggedIn"
-        ref="adminMenu"
-        :popup="true"
-        :model="[
-          {
-            label: '&nbsp;&nbsp;Tunnels',
-            to: '/admin/tunnels',
-          },
-          {
-            label: '&nbsp;&nbsp;Admin Users',
-            to: '/admin/users',
-          },
-        ]"
-      >
-        <template #item="{ item }">
-          <router-link
-            :to="item.to"
-            custom
-            v-slot="{ href, navigate, isActive, isExactActive }"
-          >
-            <a
-              :href="href"
-              @click="navigate"
-              :class="{
-                adminNavLink: true,
-                'router-link-active': isActive,
-                'router-link-active-exact': isExactActive,
-              }"
-            >
-              <div>{{ item.label }}</div>
-            </a>
-          </router-link>
-        </template>
-      </PVMenu>
+      <details v-if="userStore.loggedIn" class="admin-menu" :open="$route.path.startsWith('/admin')">
+        <summary :class="{ adminNavLink: true, 'router-link-active': $route.path.startsWith('/admin') }">Admin</summary>
+        <div class="admin-menu-items">
+          <RouterLink to="/admin/tunnels">Tunnels</RouterLink>
+          <RouterLink to="/admin/users">Admin Users</RouterLink>
+        </div>
+      </details>
       <RouterLink v-if="!userStore.loggedIn" to="/login"
         >Login</RouterLink
       >
@@ -70,19 +27,14 @@
 </template>
 
 <script lang="ts">
-import Menu from 'primevue/menu';
 import API from '@/services/API';
 import ColorModeButton from '@/components/ColorModeButton.vue';
 
 import { mapStores } from 'pinia';
-import { ref } from 'vue';
 import { useUserStore } from '@/store';
-
-const adminMenu = ref<Menu>();
 
 export default {
   components: {
-    PVMenu: Menu,
     ColorModeButton,
   },
   data: function() {
@@ -90,20 +42,16 @@ export default {
       hasMeshmap: true,
     };
   },
-  mounted() {},
   methods: {
     logout() {
       API.get('/auth/logout')
-        .then((_res) => {
+        .then(() => {
           this.userStore.loggedIn = false;
           this.$router.push('/login');
         })
         .catch((err) => {
           console.error(err);
         });
-    },
-    toggleAdminMenu(event: Event) {
-      adminMenu?.value?.toggle(event);
     },
   },
   computed: {
@@ -157,5 +105,39 @@ nav a {
 
 nav a:first-of-type {
   border: 0;
+}
+
+.admin-menu {
+  display: inline-block;
+  position: relative;
+  margin-left: 1rem;
+}
+
+.admin-menu summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.admin-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-menu-items {
+  position: absolute;
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  z-index: 10;
+  min-width: 10rem;
+}
+
+.admin-menu[open] summary {
+  color: var(--secondary-foreground);
+  font-weight: 700;
 }
 </style>
