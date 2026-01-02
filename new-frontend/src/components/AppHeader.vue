@@ -10,11 +10,17 @@
       <RouterLink to="/tunnels">Tunnels</RouterLink>
       <RouterLink v-if="hasMeshmap" to="/meshmap">Mesh Map</RouterLink>
 
-      <details v-if="userStore.loggedIn" class="admin-menu" :open="$route.path.startsWith('/admin')">
+      <details
+        v-if="userStore.loggedIn"
+        ref="adminMenu"
+        class="admin-menu"
+        :open="adminMenuOpen"
+        @toggle="handleAdminToggle"
+      >
         <summary :class="{ adminNavLink: true, 'router-link-active': $route.path.startsWith('/admin') }">Admin</summary>
         <div class="admin-menu-items">
-          <RouterLink to="/admin/tunnels">Tunnels</RouterLink>
-          <RouterLink to="/admin/users">Admin Users</RouterLink>
+          <RouterLink to="/admin/tunnels" @click="handleAdminNavigate">Tunnels</RouterLink>
+          <RouterLink to="/admin/users" @click="handleAdminNavigate">Admin Users</RouterLink>
         </div>
       </details>
       <RouterLink v-if="!userStore.loggedIn" to="/login"
@@ -40,7 +46,15 @@ export default {
   data: function() {
     return {
       hasMeshmap: true,
+      adminMenuOpen: false,
     };
+  },
+  mounted() {
+    this.adminMenuOpen = this.$route.path.startsWith('/admin');
+    document.addEventListener('click', this.handleOutsideClick);
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleOutsideClick);
   },
   methods: {
     logout() {
@@ -52,6 +66,18 @@ export default {
         .catch((err) => {
           console.error(err);
         });
+    },
+    handleAdminToggle(event) {
+      this.adminMenuOpen = event.target?.open ?? false;
+    },
+    handleAdminNavigate() {
+      this.adminMenuOpen = false;
+    },
+    handleOutsideClick(event) {
+      const menu = this.$refs.adminMenu;
+      if (!menu) return;
+      if (menu.contains(event.target)) return;
+      this.adminMenuOpen = false;
     },
   },
   computed: {
