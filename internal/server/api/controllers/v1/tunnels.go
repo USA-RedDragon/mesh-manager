@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -38,21 +39,49 @@ func GETTunnels(c *gin.Context) {
 		filter = ""
 	}
 
-	var unfilteredTunnels []models.Tunnel
-	var total int
+	pageStr, exists := c.GetQuery("page")
+	if !exists {
+		pageStr = "1"
+	}
+	pageInt, err := strconv.ParseInt(pageStr, 10, 64)
+	if err != nil || pageInt < 1 {
+		slog.Error("GETTunnels: Error parsing page", "error", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page"})
+		return
+	}
+	page := int(pageInt)
+
+	limitStr, exists := c.GetQuery("limit")
+	if !exists {
+		limitStr = "10"
+	}
+	limitInt, err := strconv.ParseInt(limitStr, 10, 64)
+	if err != nil || limitInt < 1 {
+		slog.Error("GETTunnels: Error parsing limit", "error", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+		return
+	}
+	limit := int(limitInt)
+
+	var tunnels []models.Tunnel
+	var total int64
 	switch typeStr {
 	case "wireguard":
-		var err error
-		unfilteredTunnels, err = models.ListWireguardTunnels(di.PaginatedDB)
-		if err != nil {
-			slog.Error("GETTunnels: Error getting tunnels", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnels"})
-			return
+		dbQuery := di.DB.Model(&models.Tunnel{}).Where("wireguard = ?", true)
+		if filter != "" {
+			dbQuery = dbQuery.Where("upper(hostname) LIKE ?", fmt.Sprintf("%%%s%%", strings.ToUpper(filter)))
 		}
-		total, err = models.CountWireguardTunnels(di.DB)
-		if err != nil {
+
+		if err := dbQuery.Count(&total).Error; err != nil {
 			slog.Error("GETTunnels: Error getting tunnel count", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel count"})
+			return
+		}
+
+		offset := (page - 1) * limit
+		if err := dbQuery.Order("id asc").Limit(limit).Offset(offset).Find(&tunnels).Error; err != nil {
+			slog.Error("GETTunnels: Error getting tunnels", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnels"})
 			return
 		}
 	default:
@@ -69,16 +98,6 @@ func GETTunnels(c *gin.Context) {
 		slog.Error("GETTunnels: Error parsing admin query", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing admin query"})
 		return
-	}
-
-	tunnels := unfilteredTunnels
-	if filter != "" {
-		tunnels = []models.Tunnel{}
-		for _, tunnel := range unfilteredTunnels {
-			if strings.Contains(strings.ToUpper(tunnel.Hostname), strings.ToUpper(filter)) {
-				tunnels = append(tunnels, tunnel)
-			}
-		}
 	}
 
 	if admin {
