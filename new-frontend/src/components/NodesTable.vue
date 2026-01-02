@@ -5,6 +5,7 @@ import DataTable from './datatable/DataTable.vue'
 import API from '../services/API'
 
 import { h } from 'vue'
+import { Button as UiButton } from '@/components/ui/button'
 
 interface Service {
   url: string
@@ -85,14 +86,17 @@ const devicesCount = ref(0)
 const nodesCount = ref(0)
 const totalRecords = ref(0)
 const limit = ref(10)
+const search = ref('')
 
 const props = defineProps<{
   babel?: boolean
 }>()
 
-async function fetchData(page=0, limit=10) {
+async function fetchData(page=0, pageSize=10) {
   loading.value = true;
+  limit.value = pageSize;
   const api = props.babel ? '/babel' : '/olsr';
+
   API.get(`${api}/hosts/count`)
     .then((res) => {
       nodesCount.value = res.data.nodes;
@@ -101,7 +105,13 @@ async function fetchData(page=0, limit=10) {
     .catch((err) => {
       console.error(err);
     });
-  API.get(`${api}/hosts?page=${page}&limit=${limit}`)
+
+  const params = [`page=${page}`, `limit=${pageSize}`];
+  if (search.value) {
+    params.push(`filter=${encodeURIComponent(search.value)}`);
+  }
+
+  API.get(`${api}/hosts?${params.join('&')}`)
     .then((res) => {
       if (!res.data.nodes) {
         res.data.nodes = [];
@@ -145,19 +155,44 @@ async function fetchData(page=0, limit=10) {
     });
 }
 
+function onSearch() {
+  fetchData(0, limit.value)
+}
+
+function clearSearch() {
+  search.value = ''
+  fetchData(0, limit.value)
+}
+
 onMounted(() => {
   fetchData()
 })
 </script>
 
 <template>
-  <div class="mx-auto">
+  <div class="mx-auto space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-muted-foreground">Found {{ nodesCount }} nodes and {{ devicesCount }} total devices.</p>
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium" for="nodes-search">Search</label>
+        <input
+          id="nodes-search"
+          v-model="search"
+          type="text"
+          class="w-48 rounded-md border px-2 py-1 text-sm"
+          placeholder="Hostname"
+          @keyup.enter="onSearch"
+        />
+        <UiButton size="sm" variant="secondary" @click="onSearch">Apply</UiButton>
+        <UiButton size="sm" variant="ghost" @click="clearSearch">Clear</UiButton>
+      </div>
+    </div>
     <DataTable
       :columns="columns"
       :data="data"
       pagination
       :rowCount="totalRecords"
-      :pageCount="Math.ceil(totalRecords / limit)"
+      :pageCount="Math.ceil(totalRecords / limit) || 1"
       :fetchData="fetchData"
     />
   </div>
