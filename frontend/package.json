@@ -52,7 +52,7 @@
     "@vitest/ui": "4.0.16",
     "@vue/eslint-config-prettier": "10.2.0",
     "@vue/eslint-config-typescript": "14.6.0",
-    "@vue/tsconfig": "0.7.0",
+    "@vue/tsconfig": "0.8.1",
     "axios": "1.13.2",
     "cypress": "15.8.1",
     "cypress-mochawesome-reporter": "4.0.2",

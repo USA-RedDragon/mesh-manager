@@ -162,26 +162,27 @@ export default {
           return;
         }
 
-        if (networkParts[0].length > 253) {
+        const host = networkParts[0]!;
+        const portStr = networkParts[1]!;
+
+        if (host.length > 253) {
           alert('Network must be less than 254 characters');
           return;
         }
 
-        if (!/^[A-Za-z0-9-.]+$/.test(networkParts[0])) {
+        if (!/^[A-Za-z0-9-.]+$/.test(host)) {
           alert("Network hostname must be alphanumeric, '.', or '-'");
           return;
         }
 
-        if (networkParts.length == 2) {
-          const port = parseInt(networkParts[1], 10);
-          if (isNaN(port)) {
-            alert('Network port must be a number');
-            return;
-          }
-          if (port < 1 || port > 65535) {
-            alert('Network port must be between 1 and 65535');
-            return;
-          }
+        const port = parseInt(portStr, 10);
+        if (isNaN(port)) {
+          alert('Network port must be a number');
+          return;
+        }
+        if (port < 1 || port > 65535) {
+          alert('Network port must be between 1 and 65535');
+          return;
         }
 
         API.post('/tunnels', {

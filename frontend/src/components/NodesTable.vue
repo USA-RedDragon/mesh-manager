@@ -69,8 +69,7 @@ const columns: ColumnDef<Node>[] = [
       if (!devices || devices.length === 0) {
         return h('p', { }, '')
       }
-      for (let i = 0; i < devices.length; i++) {
-        const device = devices[i]
+      for (const device of devices) {
         ret.push(h('p', { }, device.hostname + ' (' + device.ip + ')'))
       }
       return h('div', { }, ret)
@@ -87,6 +86,7 @@ const columns: ColumnDef<Node>[] = [
       }
       for (let i = 0; i < services.length; i++) {
         const service = services[i]
+        if (!service) continue
         ret.push(h('a', {
           target: "_blank",
           href: service.url,
@@ -116,13 +116,14 @@ const props = defineProps<{
 function ipv4ToInt(ip: string): number | null {
   const parts = ip.split('.').map((p) => Number(p))
   if (parts.length !== 4 || parts.some((p) => Number.isNaN(p) || p < 0 || p > 255)) return null
-  return (((parts[0] << 24) >>> 0) | ((parts[1] << 16) >>> 0) | ((parts[2] << 8) >>> 0) | (parts[3] >>> 0)) >>> 0
+  return (((parts[0]! << 24) >>> 0) | ((parts[1]! << 16) >>> 0) | ((parts[2]! << 8) >>> 0) | (parts[3]! >>> 0)) >>> 0
 }
 
 function parseCIDR(cidr: string): { prefix: number; length: number } | null {
   const [ipPart, lenPart] = cidr.split('/')
   const length = Number(lenPart)
   if (Number.isNaN(length) || length < 0 || length > 32) return null
+  if (!ipPart) return null
   const ipInt = ipv4ToInt(ipPart)
   if (ipInt === null) return null
   return { prefix: ipInt, length }
