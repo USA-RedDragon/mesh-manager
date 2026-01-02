@@ -57,8 +57,7 @@ const columns: ColumnDef<Node>[] = [
       if (value === null || value === undefined) {
         return h('span', { }, '—')
       }
-      const formatted = (value / 256).toFixed(2)
-      return h('span', { }, formatted)
+      return h('span', { }, String(value))
     },
   },
   {
