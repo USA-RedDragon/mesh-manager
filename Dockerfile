@@ -14,7 +14,7 @@ RUN npm run build
 FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:ecd2d6343483d01d522f5db304459adaa1f3212436662a22aeb15bebdcb5c43f
 
 COPY --from=frontend-build /app/dist /www
-COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:1e2cb588449b0f424a9a22d32c8dc7edb42588e974484aa2737660b2cf4aa50e /usr/share/nginx/html /meshmap
+COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:f4d7de06c694c96e0d68ea34ee63e19118fa3853dee48b527f7bef1c9985bbfc /usr/share/nginx/html /meshmap
 
 RUN apk add --no-cache \
     nginx \
