@@ -3,7 +3,7 @@ version: "3"
 services:
   postgres:
     container_name: postgres
-    image: postgres:18-alpine@sha256:bff147924b5492716cb1439f1949e7c8f42ccdd628af4f66415e31212ebdc462
+    image: postgres:18-alpine@sha256:30f2a9b6f470bece98c10f98952e720c881dc3ef987cf06b5ed4b698a350c1bb
     restart: unless-stopped
     environment:
       - POSTGRES_USER=mesh_manager
