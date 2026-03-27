@@ -128,7 +128,7 @@ func runWalk(cmd *cobra.Command, _ []string) error {
 				"data": resp.GetObject(),
 			})
 			if err != nil {
-				return fmt.Errorf("failed to encode response: %w", err)
+				return fmt.Errorf("failed to encode response for node %s (api %s): %w", resp.GetNode(), resp.APIVersion, err)
 			}
 			n, err = w.Write([]byte(","))
 			if err != nil {

@@ -89,6 +89,53 @@ func (s *SysinfoResponse) Decode(r io.Reader) error {
 	}
 }
 
+// GetNode returns the node name from the appropriate version of the response
+func (s *SysinfoResponse) GetNode() string {
+	switch s.APIVersion {
+	case APIVersion1Point0:
+		if s.SysinfoResponse1Point0 != nil {
+			return s.SysinfoResponse1Point0.Node
+		}
+	case APIVersion1Point5, APIVersion1Point6, APIVersion1Point7, APIVersion1Point8, APIVersion1Point9, APIVersion1Point10, APIVersion1Point11:
+		if s.SysinfoResponse1Point11 != nil {
+			return s.SysinfoResponse1Point11.Node
+		}
+		if s.SysinfoResponse1Point10 != nil {
+			return s.SysinfoResponse1Point10.Node
+		}
+		if s.SysinfoResponse1Point9 != nil {
+			return s.SysinfoResponse1Point9.Node
+		}
+		if s.SysinfoResponse1Point8 != nil {
+			return s.SysinfoResponse1Point8.Node
+		}
+		if s.SysinfoResponse1Point7 != nil {
+			return s.SysinfoResponse1Point7.Node
+		}
+		if s.SysinfoResponse1Point6 != nil {
+			return s.SysinfoResponse1Point6.Node
+		}
+		if s.SysinfoResponse1Point5 != nil {
+			return s.SysinfoResponse1Point5.Node
+		}
+	case APIVersion1Point12, APIVersion1Point13, APIVersion1Point14:
+		if s.SysinfoResponse1Point14 != nil {
+			return s.SysinfoResponse1Point14.Node
+		}
+		if s.SysinfoResponse1Point13 != nil {
+			return s.SysinfoResponse1Point13.Node
+		}
+		if s.SysinfoResponse1Point12 != nil {
+			return s.SysinfoResponse1Point12.Node
+		}
+	case APIVersion2Point0:
+		if s.SysinfoResponse2Point0 != nil {
+			return s.SysinfoResponse2Point0.Node
+		}
+	}
+	return ""
+}
+
 func (s *SysinfoResponse) GetObject() any {
 	switch s.APIVersion {
 	case APIVersion1Point0:
