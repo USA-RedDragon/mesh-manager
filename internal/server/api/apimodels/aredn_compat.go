@@ -599,7 +599,7 @@ type LQMConfig1Point11 struct {
 	MinQuality    int         `json:"min_quality"`
 	MarginQuality int         `json:"margin_quality"`
 	PingPenalty   int         `json:"ping_penalty"`
-	UserBlocks    map[any]any `json:"user_blocks"`
+	UserBlocks    map[string]any `json:"user_blocks"`
 	UserAllows    []string    `json:"user_allowlist"`
 }
 
