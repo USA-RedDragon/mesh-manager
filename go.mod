@@ -5,7 +5,7 @@ go 1.26.1
 require (
 	github.com/JGLTechnologies/gin-rate-limit v1.5.6
 	github.com/USA-RedDragon/configulator v0.0.0-20250409213831-8d29f1f162be
-	github.com/gin-contrib/cors v1.7.6
+	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-contrib/pprof v1.5.3
 	github.com/gin-contrib/sessions v1.1.0
 	github.com/gin-gonic/gin v1.12.0
@@ -87,7 +87,7 @@ require (
 	github.com/wader/gormstore/v2 v2.0.3 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/arch v0.22.0 // indirect
+	golang.org/x/arch v0.23.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
