@@ -130,26 +130,26 @@ let storeSort = 0;
 /* export */ function mergePlatformConfig(config)
 {
     const location = config.location ?? (config.location = {});
-    if (location.latitude === null) {
+    if (location.latitude == null) {
         location.latitude = platdata.latitude;
     }
-    if (location.longitude === null) {
+    if (location.longitude == null) {
         location.longitude = platdata.longitude;
     }
-    if (location.altitude === null) {
+    if (location.altitude == null) {
         location.altitude = platdata.height;
     }
-    if (location.gridsquare === null) {
+    if (location.gridsquare == null) {
         location.gridsquare = platdata.gridsquare;
     }
-    if (location.precision === null) {
+    if (location.precision == null) {
         location.precision = 32;
     }
 
-    if (config.meshtastic && config.meshtastic?.address === null) {
+    if (config.meshtastic && config.meshtastic?.address == null) {
         config.meshtastic.address = platdata.lan_ip;
     }
-    if (config.meshcore && config.meshcore?.address === null) {
+    if (config.meshcore && config.meshcore?.address == null) {
         config.meshcore.address = platdata.lan_ip;
     }
 
@@ -164,10 +164,10 @@ let storeSort = 0;
         push(config.channels, { "namekey": "AREDN og==" });
     }
 
-    if (config.long_name === null) {
+    if (config.long_name == null) {
         config.long_name = platdata.hostname;
     }
-    if (config.short_name === null) {
+    if (config.short_name == null) {
         config.short_name = substr(split(platdata.hostname, "-", 2)[0], -4);
     }
     const callsign = split(config.long_name, "-")[0];
@@ -175,7 +175,7 @@ let storeSort = 0;
         config.callsign = callsign;
     }
 
-    if (config.macaddress === null) {
+    if (config.macaddress == null) {
         config.macaddress = platdata.macaddress;
     }
 }
