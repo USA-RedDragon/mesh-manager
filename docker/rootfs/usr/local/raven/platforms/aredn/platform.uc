@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as socket from "socket";
 import * as timers from "../../timers.uc";
 import * as node from "../../node.uc";
 import * as channel from "../../channel.uc";
@@ -10,8 +9,6 @@ const RESCAN_INTERVAL = 1 * 60; // 1 minute
 const STORE_SORT_TIMEOUT = 10 * 60; // 10 minutes
 
 const MAX_BINARY_MEM = 0.1; // 10% free ram for binary storage
-
-const LOCATION_SOURCE_INTERNAL = 2;
 
 const PUBLISH_DIR = "/etc/meshlink/publish";
 const SERVICES_DIR = "/var/run/meshlink/services";
@@ -41,7 +38,9 @@ let storeSort = 0;
         if (d && !fs.access(d)) {
             mkdirp(d);
         }
-        fs.mkdir(p);
+        if (!fs.access(p)) {
+            fs.mkdir(p);
+        }
     }
     mkdirp("/usr/local/raven/data");
     mkdirp("/usr/local/raven/winlink/forms");
