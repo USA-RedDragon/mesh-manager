@@ -535,11 +535,41 @@ function isValidIPAddress(address)
         return true;
     }
 
-    // IPv6: only hex digits and colons
-    if (match(address, /^[0-9A-Fa-f:]+$/))
-        return true;
+    // IPv6: hex groups separated by colons, with optional :: shorthand
+    if (index(address, ":") < 0 || !match(address, /^[0-9A-Fa-f:]+$/))
+        return false;
 
-    return false;
+    // No triple+ colons
+    if (index(address, ":::") >= 0)
+        return false;
+
+    // At most one :: sequence
+    const firstDbl = index(address, "::");
+    const hasDblColon = firstDbl >= 0;
+    if (hasDblColon) {
+        const rest = substr(address, firstDbl + 2);
+        if (index(rest, "::") >= 0)
+            return false;
+    }
+
+    // Validate individual groups
+    const groups = split(address, ":");
+    const ngroups = length(groups);
+    let nonEmpty = 0;
+    for (let i = 0; i < ngroups; i++) {
+        if (groups[i] == "")
+            continue;
+        if (!match(groups[i], /^[0-9A-Fa-f]{1,4}$/))
+            return false;
+        nonEmpty++;
+    }
+
+    // Without ::, must have exactly 8 non-empty groups
+    if (!hasDblColon)
+        return ngroups == 8 && nonEmpty == 8;
+
+    // With ::, non-empty groups must total fewer than 8
+    return nonEmpty < 8;
 }
 
 /* export */ function canAcceptIPAddress(address)
