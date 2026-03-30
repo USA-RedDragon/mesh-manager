@@ -293,8 +293,9 @@ function path(name)
 /* export */ function fetch(url, timeout)
 {
     timeout = int(timeout);
-    if (!timeout || timeout < 1)
+    if (timeout < 1)
         timeout = 10;
+    // POSIX single-quote escape: close quote, escaped quote, reopen quote
     const safeUrl = replace(url ?? "", "'", "'\\''");
     const p = fs.popen(`${CURL} --max-time ${timeout} --silent --output - -- '${safeUrl}'`);
     if (!p) {
