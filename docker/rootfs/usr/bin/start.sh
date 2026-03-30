@@ -91,8 +91,11 @@ fi
 echo "${NODE_IP} dtdlink.${SERVER_NAME}.local.mesh" >> /etc/meshlink/hosts
 echo "http://${SERVER_NAME}/|tcp|${SERVER_NAME}-console" >> /etc/meshlink/services
 
-mkdir -p /etc/meshlink/publish
+# Create the publish file (not directory) for AREDN services v1 format.
+# meshlink reads this as a single file containing JSON.
+echo '{"v1":[]}' > /etc/meshlink/publish
 mkdir -p /var/run/meshlink/services
+mkdir -p /var/run/meshlink/publish
 
 RAVEN_ENABLED=${RAVEN_ENABLED:-}
 if [ "$RAVEN_ENABLED" = "true" ]; then

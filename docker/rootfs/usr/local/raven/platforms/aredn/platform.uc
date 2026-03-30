@@ -5,13 +5,17 @@ import * as channel from "../../channel.uc";
 
 const CURL = "/usr/bin/curl";
 
+const pubID = "KN6PLV.raven.v1.1";
+const pubTopic = "KN6PLV.raven.v1";
+
 const RESCAN_INTERVAL = 1 * 60; // 1 minute
 const STORE_SORT_TIMEOUT = 10 * 60; // 10 minutes
 
 const MAX_BINARY_MEM = 0.1; // 10% free ram for binary storage
 
-const PUBLISH_DIR = "/etc/meshlink/publish";
-const SERVICES_DIR = "/var/run/meshlink/services";
+const PUBLISH_FILE = "/etc/meshlink/publish";
+const RECEIVED_DIR = "/var/run/meshlink/publish";
+const MESHLINK_SOCK = "/var/run/meshlink.sock";
 
 const platdata = {};
 let bynamekey = {};
@@ -131,8 +135,32 @@ let storeSort = 0;
 /* export */ function shutdown()
 {
     inShutdown = true;
-    // Remove our published service file
-    fs.unlink(`${PUBLISH_DIR}/raven.json`);
+    // Remove our entry from the publish file (AREDN services v1 format)
+    const f = fs.open(PUBLISH_FILE, "r+");
+    if (f) {
+        try {
+            f.lock("x");
+            const info = json(f.read("all") || '{"v1":[]}');
+            for (let i = 0; i < length(info.v1); i++) {
+                if (info.v1[i].id == pubID) {
+                    splice(info.v1, i, 1);
+                    break;
+                }
+            }
+            f.seek();
+            if (length(info.v1)) {
+                f.write(sprintf("%J", info));
+            }
+            f.truncate(f.tell());
+            f.lock("u");
+            f.close();
+            system(`echo "upload publish ${PUBLISH_FILE}" | socat -T 5 UNIX-CLIENT:${MESHLINK_SOCK} - 2>&1 > /dev/null`);
+        }
+        catch (_) {
+            f.lock("u");
+            f.close();
+        }
+    }
 }
 
 /* export */ function mergePlatformConfig(config)
@@ -402,9 +430,31 @@ function orderStores()
         }
     }
 
-    // Publish service info via meshlink file-based interface
-    const pubdata = sprintf("%J", info);
-    fs.writefile(`${PUBLISH_DIR}/raven.json`, pubdata);
+    // Publish service info via meshlink in AREDN services v1 format
+    const f = fs.open(PUBLISH_FILE, "r+");
+    if (f) {
+        try {
+            f.lock("x");
+            const existing = json(f.read("all") || '{"v1":[]}');
+            for (let i = 0; i < length(existing.v1); i++) {
+                if (existing.v1[i].id == pubID) {
+                    splice(existing.v1, i, 1);
+                    break;
+                }
+            }
+            push(existing.v1, { id: pubID, topic: pubTopic, data: info });
+            f.seek();
+            f.write(sprintf("%J", existing));
+            f.truncate(f.tell());
+            f.lock("u");
+            f.close();
+            system(`echo "upload publish ${PUBLISH_FILE}" | socat -T 5 UNIX-CLIENT:${MESHLINK_SOCK} - 2>&1 > /dev/null`);
+        }
+        catch (_) {
+            f.lock("u");
+            f.close();
+        }
+    }
 }
 
 /* export */ function badge(key, count)
@@ -432,21 +482,33 @@ function orderStores()
 
 function refreshTargets()
 {
-    // Read published services from meshlink's discovered services directory
+    // Read published services from meshlink's received publish directory.
+    // meshlink stores one file per peer IP with format: {"v1": [{id, topic, data}]}
     const published = [];
-    const files = fs.lsdir(SERVICES_DIR);
+    const files = fs.lsdir(RECEIVED_DIR);
     if (files) {
         for (let i = 0; i < length(files); i++) {
-            const data = fs.readfile(`${SERVICES_DIR}/${files[i]}`);
-            if (data) {
-                try {
-                    const service = json(data);
-                    if (service) {
-                        push(published, service);
+            try {
+                const file = `${RECEIVED_DIR}/${files[i]}`;
+                const stat = fs.lstat(file);
+                if (stat && stat.size) {
+                    const f = fs.open(file);
+                    if (f) {
+                        f.lock("s");
+                        const filedata = f.read("all");
+                        f.lock("u");
+                        f.close();
+                        const jl = json(filedata);
+                        for (let m = 0; m < length(jl?.v1 ?? []); m++) {
+                            const t = jl.v1[m].topic;
+                            if (t === pubTopic || index(t, "KN6PLV.raven.v1") === 0) {
+                                push(published, jl.v1[m].data);
+                            }
+                        }
                     }
                 }
-                catch (_) {
-                }
+            }
+            catch (_) {
             }
         }
     }
