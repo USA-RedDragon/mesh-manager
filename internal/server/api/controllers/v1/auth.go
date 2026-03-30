@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/exp/slices"
+	"gorm.io/gorm"
 )
 
 func POSTLogin(c *gin.Context) {
@@ -108,10 +110,14 @@ func GETAuthCheck(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	di.DB.First(&user, uid)
-	if user.CreatedAt.IsZero() {
-		c.Status(http.StatusUnauthorized)
+	_, err := models.FindUserByID(di.DB, uid)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.Status(http.StatusUnauthorized)
+			return
+		}
+		slog.Error("GETAuthCheck: Error fetching user", "id", uid, "error", err)
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
