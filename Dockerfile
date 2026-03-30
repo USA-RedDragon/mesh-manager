@@ -37,12 +37,9 @@ COPY --from=raven-clone /raven /usr/local/raven
 
 COPY --chown=root:root docker/rootfs/. /
 
-# Verify our custom platform.uc exports all functions that upstream Raven expects.
-# Parses the `return { func1, func2, ... };` block, stripping braces and commas.
-# Fails the build if upstream adds exports we don't implement; warns on extra exports.
-# Uses the upstream file from raven-clone stage (mounted via COPY) for comparison.
-COPY --from=raven-clone /raven/platforms/aredn/platform.uc /tmp/raven-upstream-platform.uc
-RUN sed -n '/^return {$/,/^};$/p' /tmp/raven-upstream-platform.uc \
+# Verify our custom platform.uc implements all exports that upstream Raven expects.
+RUN --mount=type=bind,from=raven-clone,source=/raven/platforms/aredn/platform.uc,target=/tmp/raven-upstream-platform.uc \
+    sed -n '/^return {$/,/^};$/p' /tmp/raven-upstream-platform.uc \
     | sed '1d;$d' | tr -d ' ,' | grep -v '^$' | sort > /tmp/raven-upstream-exports.txt && \
     sed -n '/^return {$/,/^};$/p' /usr/local/raven/platforms/aredn/platform.uc \
     | sed '1d;$d' | tr -d ' ,' | grep -v '^$' | sort > /tmp/raven-custom-exports.txt && \
@@ -57,7 +54,7 @@ RUN sed -n '/^return {$/,/^};$/p' /tmp/raven-upstream-platform.uc \
         echo "WARNING: Custom platform.uc has exports not present in upstream Raven:" >&2; \
         echo "$extra" >&2; \
     fi && \
-    rm -f /tmp/raven-upstream-exports.txt /tmp/raven-custom-exports.txt /tmp/raven-upstream-platform.uc
+    rm -f /tmp/raven-upstream-exports.txt /tmp/raven-custom-exports.txt
 
 RUN rm -rf /etc/s6/olsrd
 
