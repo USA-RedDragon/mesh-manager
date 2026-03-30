@@ -112,12 +112,11 @@ func GETAuthCheck(c *gin.Context) {
 
 	_, err := models.FindUserByID(di.DB, uid)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.Status(http.StatusUnauthorized)
-			return
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			slog.Error("GETAuthCheck: Error fetching user", "id", uid, "error", err)
 		}
-		slog.Error("GETAuthCheck: Error fetching user", "id", uid, "error", err)
-		c.Status(http.StatusInternalServerError)
+		// Fail closed: if we can't verify the user for any reason, deny access
+		c.Status(http.StatusUnauthorized)
 		return
 	}
 

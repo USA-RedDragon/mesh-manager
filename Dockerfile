@@ -35,21 +35,27 @@ RUN apk add --no-cache \
 
 COPY --from=raven-clone /raven /usr/local/raven
 
-# Extract exported function names from upstream Raven platform before overwriting
-RUN sed -n '/^return {/,/^};/p' /usr/local/raven/platforms/aredn/platform.uc \
-    | grep -oE '[a-zA-Z_][a-zA-Z0-9_]*' | sort > /tmp/raven-upstream-exports.txt
+# Extract exported function names from upstream Raven platform before overwriting.
+# Parses the `return { func1, func2, ... };` block, stripping braces and commas.
+RUN sed -n '/^return {$/,/^};$/p' /usr/local/raven/platforms/aredn/platform.uc \
+    | sed '1d;$d' | tr -d ' ,' | grep -v '^$' | sort > /tmp/raven-upstream-exports.txt
 
 COPY --chown=root:root docker/rootfs/. /
 
 # Verify our custom platform.uc exports all functions that upstream Raven expects.
 # This will break the build if a Raven update adds new platform functions we don't implement.
-RUN sed -n '/^return {/,/^};/p' /usr/local/raven/platforms/aredn/platform.uc \
-    | grep -oE '[a-zA-Z_][a-zA-Z0-9_]*' | sort > /tmp/raven-custom-exports.txt && \
+RUN sed -n '/^return {$/,/^};$/p' /usr/local/raven/platforms/aredn/platform.uc \
+    | sed '1d;$d' | tr -d ' ,' | grep -v '^$' | sort > /tmp/raven-custom-exports.txt && \
     missing=$(comm -23 /tmp/raven-upstream-exports.txt /tmp/raven-custom-exports.txt) && \
     if [ -n "$missing" ]; then \
         echo "ERROR: Custom platform.uc is missing exports required by upstream Raven:" >&2; \
         echo "$missing" >&2; \
         exit 1; \
+    fi && \
+    extra=$(comm -13 /tmp/raven-upstream-exports.txt /tmp/raven-custom-exports.txt) && \
+    if [ -n "$extra" ]; then \
+        echo "WARNING: Custom platform.uc has exports not present in upstream Raven:" >&2; \
+        echo "$extra" >&2; \
     fi && \
     rm -f /tmp/raven-upstream-exports.txt /tmp/raven-custom-exports.txt
 
