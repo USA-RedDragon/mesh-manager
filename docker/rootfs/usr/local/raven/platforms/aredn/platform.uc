@@ -61,13 +61,22 @@ let storeSort = 0;
 
     // Generate a MAC address from the node IP for uniqueness
     if (platdata.main_ip) {
+        function parseIpOctet(s)
+        {
+            let v = int(s ?? "0");
+            if (v < 0)
+                v = 0;
+            else if (v > 255)
+                v = 255;
+            return v;
+        }
         const octets = split(platdata.main_ip, ".");
         platdata.macaddress = [
             0x02, 0x00,
-            hex(octets[0] ?? "0"),
-            hex(octets[1] ?? "0"),
-            hex(octets[2] ?? "0"),
-            hex(octets[3] ?? "0"),
+            parseIpOctet(octets[0]),
+            parseIpOctet(octets[1]),
+            parseIpOctet(octets[2]),
+            parseIpOctet(octets[3]),
         ];
     }
     else {
