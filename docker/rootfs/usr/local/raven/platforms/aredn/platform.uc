@@ -175,12 +175,14 @@ let storeSort = 0;
     if (config.long_name == null) {
         config.long_name = platdata.hostname;
     }
-    if (config.short_name == null) {
-        config.short_name = substr(split(platdata.hostname, "-", 2)[0], -4);
+    if (config.short_name == null && config.long_name) {
+        config.short_name = substr(split(config.long_name, "-", 2)[0], -4);
     }
-    const callsign = split(config.long_name, "-")[0];
-    if (callsign) {
-        config.callsign = callsign;
+    if (config.long_name) {
+        const callsign = split(config.long_name, "-")[0];
+        if (callsign) {
+            config.callsign = callsign;
+        }
     }
 
     if (config.macaddress == null) {
