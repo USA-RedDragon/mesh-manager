@@ -91,6 +91,30 @@ fi
 echo "${NODE_IP} dtdlink.${SERVER_NAME}.local.mesh" >> /etc/meshlink/hosts
 echo "http://${SERVER_NAME}/|tcp|${SERVER_NAME}-console" >> /etc/meshlink/services
 
+# Generate Raven platform config from environment variables
+LATITUDE=${LATITUDE:-}
+LONGITUDE=${LONGITUDE:-}
+GRIDSQUARE=${GRIDSQUARE:-}
+mkdir -p /etc/meshlink/publish
+mkdir -p /var/run/meshlink/services
+mkdir -p /usr/local/raven/data
+mkdir -p /usr/local/raven/winlink/forms
+mkdir -p /tmp/apps/raven/images
+IS_SUPERNODE="false"
+if [ -n "$SUPERNODE" ]; then
+    IS_SUPERNODE="true"
+fi
+cat <<EOF > /etc/raven-platform.json
+{
+    "hostname": "${SERVER_NAME}",
+    "main_ip": "${NODE_IP}",
+    "latitude": "${LATITUDE}",
+    "longitude": "${LONGITUDE}",
+    "gridsquare": "${GRIDSQUARE}",
+    "supernode": ${IS_SUPERNODE}
+}
+EOF
+
 sleep 3
 
 mesh-manager generate

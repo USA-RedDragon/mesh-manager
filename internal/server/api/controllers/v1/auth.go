@@ -86,3 +86,40 @@ func GETLogout(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out"})
 }
+
+func GETAuthCheck(c *gin.Context) {
+	session := sessions.Default(c)
+
+	defer func() {
+		if recover() != nil {
+			c.Status(http.StatusUnauthorized)
+		}
+	}()
+
+	userID := session.Get("user_id")
+	if userID == nil {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	uid, ok := userID.(uint)
+	if !ok || uid == 0 {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
+	if !ok {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	var user models.User
+	di.DB.Find(&user, "id = ?", uid)
+	if user.CreatedAt.IsZero() {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	c.Status(http.StatusOK)
+}

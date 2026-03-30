@@ -67,6 +67,7 @@ func v1(group *gin.RouterGroup, config *config.Config) {
 	v1Auth := group.Group("/auth")
 	v1Auth.POST("/login", v1Controllers.POSTLogin)
 	v1Auth.GET("/logout", v1Controllers.GETLogout)
+	v1Auth.GET("/check", v1Controllers.GETAuthCheck)
 
 	v1Users := group.Group("/users")
 	// Paginated
