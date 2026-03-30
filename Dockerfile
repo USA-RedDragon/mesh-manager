@@ -39,10 +39,14 @@ COPY --chown=root:root docker/rootfs/. /
 
 # Verify our custom platform.uc implements all exports that upstream Raven expects.
 RUN --mount=type=bind,from=raven-clone,source=/raven/platforms/aredn/platform.uc,target=/tmp/raven-upstream-platform.uc \
-    sed -n '/^return {$/,/^};$/p' /tmp/raven-upstream-platform.uc \
+    sed -n '/^[[:space:]]*return[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*};[[:space:]]*$/p' /tmp/raven-upstream-platform.uc \
     | sed '1d;$d' | tr -d ' ,' | grep -v '^$' | sort > /tmp/raven-upstream-exports.txt && \
-    sed -n '/^return {$/,/^};$/p' /usr/local/raven/platforms/aredn/platform.uc \
+    sed -n '/^[[:space:]]*return[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*};[[:space:]]*$/p' /usr/local/raven/platforms/aredn/platform.uc \
     | sed '1d;$d' | tr -d ' ,' | grep -v '^$' | sort > /tmp/raven-custom-exports.txt && \
+    if [ ! -s /tmp/raven-upstream-exports.txt ] || [ ! -s /tmp/raven-custom-exports.txt ]; then \
+        echo "ERROR: Failed to extract exports from platform.uc (check return-block formatting)." >&2; \
+        exit 1; \
+    fi && \
     missing=$(comm -23 /tmp/raven-upstream-exports.txt /tmp/raven-custom-exports.txt) && \
     if [ -n "$missing" ]; then \
         echo "ERROR: Custom platform.uc is missing exports required by upstream Raven:" >&2; \
