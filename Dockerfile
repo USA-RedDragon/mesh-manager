@@ -31,7 +31,8 @@ COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:fab7ffbf8f1b7a
 RUN apk add --no-cache \
     nginx \
     socat \
-    iperf3
+    iperf3 \
+    usign
 
 COPY --from=raven-clone /raven /usr/local/raven
 
