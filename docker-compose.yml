@@ -75,6 +75,10 @@ services:
       - NODE_IP=10.54.27.2
       - BABEL_ENABLED=true
       - BABEL_ROUTER_ID=01:42:c0:a8:fb:05
+      # - RAVEN_ENABLED=true
+      # - LATITUDE=
+      # - LONGITUDE=
+      # - GRIDSQUARE=
     hostname: KI5VMF-TEST
     ports:
       - 38379:80
@@ -113,6 +117,10 @@ services:
       - WIREGUARD_STARTING_PORT=6527
       - BABEL_ENABLED=true
       - BABEL_ROUTER_ID=58:a7:4d:b6:f9:75
+      # - RAVEN_ENABLED=true
+      # - LATITUDE=
+      # - LONGITUDE=
+      # - GRIDSQUARE=
     hostname: TEST-SUPERNODE
     ports:
       - "6527-6626:6527-6626/udp"

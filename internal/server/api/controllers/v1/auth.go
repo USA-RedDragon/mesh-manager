@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/exp/slices"
+	"gorm.io/gorm"
 )
 
 func POSTLogin(c *gin.Context) {
@@ -85,4 +87,43 @@ func GETLogout(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out"})
+}
+
+func GETAuthCheck(c *gin.Context) {
+	session := sessions.Default(c)
+
+	userID := session.Get("user_id")
+	if userID == nil {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	uid, ok := userID.(uint)
+	if !ok || uid == 0 {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	diVal, exists := c.Get(middleware.DepInjectionKey)
+	if !exists {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+	di, ok := diVal.(*middleware.DepInjection)
+	if !ok {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	_, err := models.FindUserByID(di.DB, uid)
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			slog.Error("GETAuthCheck: Error fetching user", "id", uid, "error", err)
+		}
+		// Fail closed: if we can't verify the user for any reason, deny access
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	c.Status(http.StatusOK)
 }

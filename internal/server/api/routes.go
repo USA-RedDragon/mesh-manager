@@ -34,6 +34,10 @@ func ApplyRoutes(router *gin.Engine, eventsChannel chan events.Event, config *co
 
 	router.POST("/notify", v1Controllers.POSTNotify)
 
+	// Register auth check outside rate-limited group so nginx auth_request
+	// never receives 429 (which it treats as an internal error).
+	router.GET("/api/v1/auth/check", v1Controllers.GETAuthCheck)
+
 	apiV1 := router.Group("/api/v1")
 	apiV1.Use(ratelimitMW)
 	v1(apiV1, config)

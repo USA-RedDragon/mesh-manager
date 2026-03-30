@@ -11,6 +11,18 @@ ENV NODE_ENV=production
 
 RUN npm run build
 
+FROM alpine:3.21.3@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c AS raven-clone
+
+# renovate: datasource=git-refs depName=https://github.com/kn6plv/Raven
+ARG RAVEN_VERSION=main
+ARG RAVEN_REF=66ddd5dde36152ed187d81b8a709fe9a95c64de9
+
+RUN apk add --no-cache git
+RUN git clone https://github.com/kn6plv/Raven.git /raven && \
+    cd /raven && \
+    git checkout "${RAVEN_REF}" && \
+    rm -rf /raven/.git
+
 FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:ecd2d6343483d01d522f5db304459adaa1f3212436662a22aeb15bebdcb5c43f
 
 COPY --from=frontend-build /app/dist /www
@@ -21,7 +33,32 @@ RUN apk add --no-cache \
     socat \
     iperf3
 
+COPY --from=raven-clone /raven /usr/local/raven
+
 COPY --chown=root:root docker/rootfs/. /
+
+# Verify our custom platform.uc implements all exports that upstream Raven expects.
+RUN --mount=type=bind,from=raven-clone,source=/raven/platforms/aredn/platform.uc,target=/tmp/raven-upstream-platform.uc \
+    sed -n '/^[[:space:]]*return[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*};[[:space:]]*$/p' /tmp/raven-upstream-platform.uc \
+    | sed '1d;$d' | tr -d ' ,' | grep -v '^$' | sort > /tmp/raven-upstream-exports.txt && \
+    sed -n '/^[[:space:]]*return[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*};[[:space:]]*$/p' /usr/local/raven/platforms/aredn/platform.uc \
+    | sed '1d;$d' | tr -d ' ,' | grep -v '^$' | sort > /tmp/raven-custom-exports.txt && \
+    if [ ! -s /tmp/raven-upstream-exports.txt ] || [ ! -s /tmp/raven-custom-exports.txt ]; then \
+        echo "ERROR: Failed to extract exports from platform.uc (check return-block formatting)." >&2; \
+        exit 1; \
+    fi && \
+    missing=$(comm -23 /tmp/raven-upstream-exports.txt /tmp/raven-custom-exports.txt) && \
+    if [ -n "$missing" ]; then \
+        echo "ERROR: Custom platform.uc is missing exports required by upstream Raven:" >&2; \
+        echo "$missing" >&2; \
+        exit 1; \
+    fi && \
+    extra=$(comm -13 /tmp/raven-upstream-exports.txt /tmp/raven-custom-exports.txt) && \
+    if [ -n "$extra" ]; then \
+        echo "WARNING: Custom platform.uc has exports not present in upstream Raven:" >&2; \
+        echo "$extra" >&2; \
+    fi && \
+    rm -f /tmp/raven-upstream-exports.txt /tmp/raven-custom-exports.txt
 
 RUN rm -rf /etc/s6/olsrd
 
