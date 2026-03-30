@@ -292,7 +292,11 @@ function path(name)
 
 /* export */ function fetch(url, timeout)
 {
-    const p = fs.popen(`${CURL} --max-time ${timeout} --silent --output - ${url}`);
+    timeout = int(timeout);
+    if (!timeout || timeout < 1)
+        timeout = 10;
+    const safeUrl = replace(url ?? "", "'", "'\\''");
+    const p = fs.popen(`${CURL} --max-time ${timeout} --silent --output - -- '${safeUrl}'`);
     if (!p) {
         return null;
     }
@@ -514,9 +518,35 @@ function refreshTargets()
     return platdata.mapUrl ? replace(replace(platdata.mapUrl, "(lat)", lat), "(lon)", lon) : null;
 }
 
+function isValidIPAddress(address)
+{
+    if (!address)
+        return false;
+
+    // IPv4: a.b.c.d with each octet 0-255
+    if (match(address, /^([0-9]{1,3}\.){3}[0-9]{1,3}$/)) {
+        const parts = split(address, ".");
+        for (let i = 0; i < length(parts); i++) {
+            const n = int(parts[i]);
+            if (n < 0 || n > 255)
+                return false;
+        }
+        return true;
+    }
+
+    // IPv6: only hex digits and colons
+    if (match(address, /^[0-9A-Fa-f:]+$/))
+        return true;
+
+    return false;
+}
+
 /* export */ function canAcceptIPAddress(address)
 {
-    return hasMeshIpForwarder || system(`/sbin/ip route show table 20 | grep -q ${address}`) === 0;
+    if (!isValidIPAddress(address))
+        return false;
+
+    return hasMeshIpForwarder || system(`/sbin/ip route show table 20 | grep -F -q -- '${address}'`) === 0;
 }
 
 return {
