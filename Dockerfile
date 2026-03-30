@@ -23,6 +23,15 @@ RUN git clone https://github.com/kn6plv/Raven.git /raven && \
     git checkout "${RAVEN_REF}" && \
     rm -rf /raven/.git
 
+FROM alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS usign-build
+
+RUN apk add --no-cache git build-base cmake
+RUN git clone https://git.openwrt.org/project/usign.git /usign-src && \
+    cd /usign-src && \
+    cmake -B build . && \
+    cmake --build build && \
+    cp build/usign /usr/bin/usign
+
 FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:ecd2d6343483d01d522f5db304459adaa1f3212436662a22aeb15bebdcb5c43f
 
 COPY --from=frontend-build /app/dist /www
@@ -31,8 +40,9 @@ COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:fab7ffbf8f1b7a
 RUN apk add --no-cache \
     nginx \
     socat \
-    iperf3 \
-    usign
+    iperf3
+
+COPY --from=usign-build /usr/bin/usign /usr/bin/usign
 
 COPY --from=raven-clone /raven /usr/local/raven
 
