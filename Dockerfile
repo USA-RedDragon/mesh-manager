@@ -48,6 +48,7 @@ COPY --from=raven-clone /raven /usr/local/raven
 
 # Patch Raven UI to connect WebSocket via nginx proxy instead of directly to port 4404
 RUN sed -i 's|`ws://${location.hostname}:4404`|((location.protocol==="https:")?"wss://":"ws://")+location.host+"/raven/ws"|' /usr/local/raven/ui/ui.js
+RUN sed -i 's/socket.SOCK_STRAM/socket.SOCK_STREAM/' /usr/local/raven/websocket.uc
 
 COPY --chown=root:root docker/rootfs/. /
 
