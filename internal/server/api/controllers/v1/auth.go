@@ -90,12 +90,6 @@ func GETLogout(c *gin.Context) {
 func GETAuthCheck(c *gin.Context) {
 	session := sessions.Default(c)
 
-	defer func() {
-		if recover() != nil {
-			c.Status(http.StatusUnauthorized)
-		}
-	}()
-
 	userID := session.Get("user_id")
 	if userID == nil {
 		c.Status(http.StatusUnauthorized)
@@ -115,7 +109,7 @@ func GETAuthCheck(c *gin.Context) {
 	}
 
 	var user models.User
-	di.DB.Find(&user, "id = ?", uid)
+	di.DB.First(&user, uid)
 	if user.CreatedAt.IsZero() {
 		c.Status(http.StatusUnauthorized)
 		return

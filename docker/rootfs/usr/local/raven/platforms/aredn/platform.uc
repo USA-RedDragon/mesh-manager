@@ -404,7 +404,7 @@ function orderStores()
     for (let k in badges) {
         total += badges[k];
     }
-    fs.writefile("/tmp/apps/raven/badge", total == 0 ? "" : total > 99 ? "99+" : `${total}`);
+    fs.writefile("/tmp/apps/raven/badge", total === 0 ? "" : total > 99 ? "99+" : `${total}`);
 }
 
 /* export */ function auth(headers)
