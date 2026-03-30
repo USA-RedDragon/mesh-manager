@@ -46,6 +46,9 @@ COPY --from=usign-build /usr/bin/usign /usr/bin/usign
 
 COPY --from=raven-clone /raven /usr/local/raven
 
+# Patch Raven UI to connect WebSocket via nginx proxy instead of directly to port 4404
+RUN sed -i 's|`ws://${location.hostname}:4404`|((location.protocol==="https:")?"wss://":"ws://")+location.host+"/raven/ws"|' /usr/local/raven/ui/ui.js
+
 COPY --chown=root:root docker/rootfs/. /
 
 # Verify our custom platform.uc implements all exports that upstream Raven expects.
