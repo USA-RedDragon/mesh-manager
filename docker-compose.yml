@@ -76,8 +76,8 @@ services:
       - BABEL_ENABLED=true
       - BABEL_ROUTER_ID=01:42:c0:a8:fb:05
       # - RAVEN_ENABLED=true
-      # - LATITUDE=0.0
-      # - LONGITUDE=0.0
+      # - LATITUDE=
+      # - LONGITUDE=
       # - GRIDSQUARE=
     hostname: KI5VMF-TEST
     ports:
@@ -118,8 +118,8 @@ services:
       - BABEL_ENABLED=true
       - BABEL_ROUTER_ID=58:a7:4d:b6:f9:75
       # - RAVEN_ENABLED=true
-      # - LATITUDE=0.0
-      # - LONGITUDE=0.0
+      # - LATITUDE=
+      # - LONGITUDE=
       # - GRIDSQUARE=
     hostname: TEST-SUPERNODE
     ports:
