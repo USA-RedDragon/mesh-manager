@@ -104,7 +104,12 @@ func GETAuthCheck(c *gin.Context) {
 		return
 	}
 
-	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
+	diVal, exists := c.Get(middleware.DepInjectionKey)
+	if !exists {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+	di, ok := diVal.(*middleware.DepInjection)
 	if !ok {
 		c.Status(http.StatusUnauthorized)
 		return
