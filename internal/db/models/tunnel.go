@@ -181,25 +181,23 @@ func GetNextWireguardIP(db *gorm.DB, config *config.Config) (string, error) {
 }
 
 func GetNextWireguardPort(db *gorm.DB, config *config.Config) (uint16, error) {
-	// Each tunnel is added with a port starting from 51820 and incrementing by 1 for each tunnel
-	// We need to find the next available port.
 	var tunnels []Tunnel
 	err := db.Where("wireguard = ?", true).Find(&tunnels).Error
 	if err != nil {
 		return 0, err
 	}
-	// We need to find the next available port.
-	// We can do this by finding the highest port, and adding 1 to it.
-	highestPort := config.Wireguard.StartingPort - 1
+
+	usedPorts := make(map[uint16]struct{}, len(tunnels))
 	for _, tunnel := range tunnels {
-		if tunnel.WireguardPort > highestPort {
-			highestPort = tunnel.WireguardPort
-		}
-	}
-	// If the highest port is 65535, we need to return an error.
-	if highestPort == 65535 {
-		return 0, fmt.Errorf("no more ports available")
+		usedPorts[tunnel.WireguardPort] = struct{}{}
 	}
 
-	return highestPort + 1, nil
+	// Find the first unused port starting from the configured starting port.
+	for port := config.Wireguard.StartingPort; port != 0; port++ {
+		if _, used := usedPorts[port]; !used {
+			return port, nil
+		}
+	}
+
+	return 0, fmt.Errorf("no more ports available")
 }
