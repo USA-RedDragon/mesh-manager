@@ -15,7 +15,7 @@ FROM alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a
 
 # renovate: datasource=git-refs depName=https://github.com/kn6plv/Raven
 ARG RAVEN_VERSION=main
-ARG RAVEN_REF=3d32a40346d35d5cb10d82299817e18a8b97e58a
+ARG RAVEN_REF=c69b02a97f632f5d8e26fd13ab93edc0837867c1
 
 RUN apk add --no-cache git
 RUN git clone https://github.com/kn6plv/Raven.git /raven && \
