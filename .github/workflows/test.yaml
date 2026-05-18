@@ -276,7 +276,7 @@ jobs:
         run: |
           env CGO_ENABLED=0 go test -v ./... -coverprofile coverage.out -coverpkg=./... -covermode atomic
 
-      - uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5.5.4
+      - uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
