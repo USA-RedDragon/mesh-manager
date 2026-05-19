@@ -72,6 +72,6 @@
     "typescript-eslint": "8.59.4",
     "vite": "7.3.3",
     "vitest": "4.1.6",
-    "vue-tsc": "3.3.0"
+    "vue-tsc": "3.3.1"
   }
 }
