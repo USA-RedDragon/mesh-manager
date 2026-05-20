@@ -147,7 +147,7 @@ func (m *Manager) addPeer(ctx context.Context, peer models.Tunnel) {
 	// Check if device exists
 	wgdev, err := netlink.LinkByName(iface)
 	if err == nil {
-		slog.Warn("wireguard interface already exists", "iface", iface, "peer", peer.Hostname)
+		slog.Debug("wireguard interface already exists", "iface", iface, "peer", peer.Hostname)
 	} else {
 		la := netlink.NewLinkAttrs()
 		la.Name = iface
@@ -201,10 +201,28 @@ func (m *Manager) addPeer(ctx context.Context, peer models.Tunnel) {
 	}
 	slog.Debug("Generated IPv6 link-local address", "address", peerIP6)
 
-	err = netlink.AddrAdd(wgdev, &netlink.Addr{IPNet: &net.IPNet{IP: net.ParseIP(peerIP6), Mask: net.CIDRMask(64, 128)}})
+	// Check if the address already exists
+	addrs, err := netlink.AddrList(wgdev, netlink.FAMILY_V6)
 	if err != nil {
-		slog.Error("failed to add IPv6 link-local address to wireguard device", "iface", iface, "peer", peer.Hostname, "error", err)
+		slog.Error("failed to list addresses on wireguard device", "iface", iface, "peer", peer.Hostname, "error", err)
 		return
+	}
+
+	hasIpv6 := false
+	for _, addr := range addrs {
+		if addr.IP.Equal(net.ParseIP(peerIP6)) {
+			slog.Debug("IPv6 link-local address already exists on wireguard device", "address", peerIP6)
+			hasIpv6 = true
+			break
+		}
+	}
+
+	if !hasIpv6 {
+		err = netlink.AddrAdd(wgdev, &netlink.Addr{IPNet: &net.IPNet{IP: net.ParseIP(peerIP6), Mask: net.CIDRMask(64, 128)}})
+		if err != nil {
+			slog.Error("failed to add IPv6 link-local address to wireguard device", "iface", iface, "peer", peer.Hostname, "error", err)
+			return
+		}
 	}
 
 	var privkey wgtypes.Key
