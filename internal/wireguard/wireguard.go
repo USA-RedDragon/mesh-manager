@@ -2,6 +2,7 @@ package wireguard
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -211,6 +212,13 @@ func (m *Manager) addPeer(ctx context.Context, peer models.Tunnel) {
 			slog.Error("failed to list addresses on wireguard device", "iface", iface, "peer", peer.Hostname, "error", err)
 			return
 		}
+		rnd := make([]byte, 1)
+		_, err = rand.Read(rnd)
+		if err != nil {
+			slog.Error("failed to generate random delay", "error", err)
+			return
+		}
+		time.Sleep(time.Duration(rnd[0]) * time.Millisecond)
 		attempts++
 	}
 	if err != nil {
