@@ -2,6 +2,7 @@ package wireguard
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -202,9 +203,18 @@ func (m *Manager) addPeer(ctx context.Context, peer models.Tunnel) {
 	slog.Debug("Generated IPv6 link-local address", "address", peerIP6)
 
 	// Check if the address already exists
-	addrs, err := netlink.AddrList(wgdev, netlink.FAMILY_V6)
+	attempts := 0
+	var addrs []netlink.Addr
+	for attempts < 5 {
+		addrs, err = netlink.AddrList(wgdev, netlink.FAMILY_V6)
+		if err != nil && !errors.Is(err, netlink.ErrDumpInterrupted) {
+			slog.Error("failed to list addresses on wireguard device", "iface", iface, "peer", peer.Hostname, "error", err)
+			return
+		}
+		attempts++
+	}
 	if err != nil {
-		slog.Error("failed to list addresses on wireguard device", "iface", iface, "peer", peer.Hostname, "error", err)
+		slog.Error("failed to list addresses on wireguard device after 5 attempts", "iface", iface, "peer", peer.Hostname, "error", err)
 		return
 	}
 
