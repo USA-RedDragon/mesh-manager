@@ -32,7 +32,7 @@ RUN git clone https://git.openwrt.org/project/usign.git /usign-src && \
     cmake --build build && \
     cp build/usign /usr/bin/usign
 
-FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:1a7e520e83e4506455a74c1571b0c02416bff76e1567723045dd6e6d0d6dc2d9
+FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:56029202fcd8c1712c6066279f2748fc3fe33eafa185abc12946e63a6d0cc202
 
 COPY --from=frontend-build /app/dist /www
 COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:b86ba44e9090193d32083faee17a6d2d8432e75337a071c683c276f9888d2d5b /usr/share/nginx/html /meshmap
