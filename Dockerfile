@@ -11,7 +11,7 @@ ENV NODE_ENV=production
 
 RUN npm run build
 
-FROM alpine:3.24.0@sha256:8ddefa941e689fc29abcdeb8dae3b3c6d139cc08ce9a52633931160701770685 AS raven-clone
+FROM alpine:3.24.0@sha256:a2d49ea686c2adfe3c992e47dc3b5e7fa6e6b5055609400dc2acaeb241c829f4 AS raven-clone
 
 # renovate: datasource=git-refs depName=https://github.com/kn6plv/Raven
 ARG RAVEN_VERSION=main
@@ -23,7 +23,7 @@ RUN git clone https://github.com/kn6plv/Raven.git /raven && \
     git checkout "${RAVEN_REF}" && \
     rm -rf /raven/.git
 
-FROM alpine:3.24.0@sha256:8ddefa941e689fc29abcdeb8dae3b3c6d139cc08ce9a52633931160701770685 AS usign-build
+FROM alpine:3.24.0@sha256:a2d49ea686c2adfe3c992e47dc3b5e7fa6e6b5055609400dc2acaeb241c829f4 AS usign-build
 
 RUN apk add --no-cache git build-base cmake
 RUN git clone https://git.openwrt.org/project/usign.git /usign-src && \
