@@ -46,7 +46,7 @@
     "@tanstack/vue-table": "8.21.3",
     "@tsconfig/node22": "22.0.5",
     "@types/jsdom": "28.0.3",
-    "@types/node": "24.12.4",
+    "@types/node": "24.13.2",
     "@vitejs/plugin-vue": "6.0.7",
     "@vitest/eslint-plugin": "1.6.20",
     "@vitest/ui": "4.1.9",
