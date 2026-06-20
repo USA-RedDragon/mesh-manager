@@ -24,6 +24,7 @@ func NewCommand(version, commit string) *cobra.Command {
 		DisableAutoGenTag: true,
 	}
 	cmd.AddCommand(newGenerateCommand(version, commit))
+	cmd.AddCommand(newMigrateCommand(version, commit))
 	cmd.AddCommand(newNotifyCommand(version, commit))
 	cmd.AddCommand(newServerCommand(version, commit))
 	cmd.AddCommand(newWalkCommand(version, commit))
