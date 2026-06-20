@@ -637,7 +637,7 @@ func (s *Service) refreshTracker(ctx context.Context, t *Tracker) error {
 				}
 			}
 		case []any:
-			// Older AREDN versions return an array instead of a map
+			// Older versions return an array instead of a map
 			// I only see one instance in the wild, so we log and skip
 			slog.Warn("LQM: Unexpected format for remote LQM trackers; expected map but got array", "mac", t.MAC, "hostname", t.Hostname)
 		}
@@ -907,7 +907,7 @@ func (s *Service) updateRoutes(ctx context.Context) {
 	s.mu.Unlock()
 
 	// Example: add route prefix 10.51.120.3/32 ... installed yes ... nexthop fe80::... metric 257 ...
-	// Match AREDN: only count installed IPv4 routes with metric != 65535
+	// only count installed IPv4 routes with metric != 65535
 	routeRegex := regexp.MustCompile(`^add route .+ prefix ([^ /]+)/([0-9]+) .* installed yes .* metric ([0-9]+) .* nexthop ([^ \t]+)`)
 
 	totalRoutes := 0
@@ -925,7 +925,7 @@ func (s *Service) updateRoutes(ctx context.Context) {
 			metric, _ := strconv.Atoi(matches[3])
 			via := matches[4]
 
-			// Skip non-IPv4 routes and invalid metrics (matching AREDN behavior)
+			// Skip non-IPv4 routes and invalid metrics (matching upstream behavior)
 			if !strings.Contains(prefix, ".") || metric == 65535 {
 				continue
 			}
