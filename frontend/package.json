@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "4.3.1",
-    "@vue/eslint-config-typescript": "14.8.0",
+    "@vue/eslint-config-typescript": "14.9.0",
     "@vuelidate/core": "2.0.3",
     "@vuelidate/validators": "2.0.4",
     "@vueuse/core": "14.3.0",
@@ -51,7 +51,7 @@
     "@vitest/eslint-plugin": "1.6.20",
     "@vitest/ui": "4.1.9",
     "@vue/eslint-config-prettier": "10.2.0",
-    "@vue/eslint-config-typescript": "14.8.0",
+    "@vue/eslint-config-typescript": "14.9.0",
     "@vue/tsconfig": "0.9.1",
     "axios": "1.18.0",
     "cypress": "15.17.0",
