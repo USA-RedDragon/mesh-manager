@@ -15,6 +15,6 @@ jobs:
     permissions:
       contents: write
       packages: write
-    uses: USA-RedDragon/reusable-actions/.github/workflows/goreleaser.yaml@ba338faac060b1f62598fb2aea122db3926aad6e # v2.0.18
+    uses: USA-RedDragon/reusable-actions/.github/workflows/goreleaser.yaml@4a4ab216b29662f3424712de85cf3a0a1a0ac7af # v2.0.19
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
