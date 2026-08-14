@@ -3,7 +3,7 @@ module github.com/USA-RedDragon/mesh-manager
 go 1.26.6
 
 require (
-	github.com/JGLTechnologies/gin-rate-limit v1.5.8
+	github.com/JGLTechnologies/gin-rate-limit v1.5.9
 	github.com/USA-RedDragon/configulator v0.0.0-20250409213831-8d29f1f162be
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-contrib/pprof v1.5.4
