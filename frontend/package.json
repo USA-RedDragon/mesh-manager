@@ -44,7 +44,7 @@
     "@iconify/vue": "5.0.1",
     "@rushstack/eslint-patch": "1.16.1",
     "@tanstack/vue-table": "8.21.3",
-    "@tsconfig/node22": "22.0.5",
+    "@tsconfig/node22": "22.0.6",
     "@types/jsdom": "28.0.3",
     "@types/node": "24.13.3",
     "@vitejs/plugin-vue": "6.0.8",
