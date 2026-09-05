@@ -7,7 +7,7 @@ require (
 	github.com/USA-RedDragon/configulator v0.0.0-20250409213831-8d29f1f162be
 	github.com/gin-contrib/cors v1.7.8
 	github.com/gin-contrib/pprof v1.5.5
-	github.com/gin-contrib/sessions v1.1.0
+	github.com/gin-contrib/sessions v1.1.1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/gorilla/websocket v1.5.3
@@ -84,7 +84,7 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
-	github.com/wader/gormstore/v2 v2.0.3 // indirect
+	github.com/wader/gormstore/v2 v2.0.5 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.8.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/arch v0.29.0 // indirect
