@@ -638,16 +638,16 @@ type LQM1Point11 struct {
 }
 
 type LQMConfig1Point11 struct {
-	MinSNR        int         `json:"min_snr"`
-	MarginSNR     int         `json:"margin_snr"`
-	MinDistance   int         `json:"min_distance"`
-	MaxDistance   int         `json:"max_distance"`
-	AutoDistance  int         `json:"auto_distance"`
-	MinQuality    int         `json:"min_quality"`
-	MarginQuality int         `json:"margin_quality"`
-	PingPenalty   int         `json:"ping_penalty"`
+	MinSNR        int            `json:"min_snr"`
+	MarginSNR     int            `json:"margin_snr"`
+	MinDistance   int            `json:"min_distance"`
+	MaxDistance   int            `json:"max_distance"`
+	AutoDistance  int            `json:"auto_distance"`
+	MinQuality    int            `json:"min_quality"`
+	MarginQuality int            `json:"margin_quality"`
+	PingPenalty   int            `json:"ping_penalty"`
 	UserBlocks    map[string]any `json:"user_blocks"`
-	UserAllows    []string    `json:"user_allowlist"`
+	UserAllows    []string       `json:"user_allowlist"`
 }
 
 type SysinfoResponseCommon struct {

@@ -12,6 +12,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const (
+	keyError      = "error"
+	msgAuthFailed = "Authentication failed"
+)
+
 func RequireLogin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
@@ -21,25 +26,25 @@ func RequireLogin() gin.HandlerFunc {
 				slog.Error("RequireLogin: Recovered from panic", "error", recover())
 				// Delete the session cookie
 				c.SetCookie("sessions", "", -1, "/", "", false, true)
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{keyError: msgAuthFailed})
 			}
 		}()
 		userID := session.Get("user_id")
 
 		if userID == nil {
 			slog.Debug("RequireLogin: user_id is nil")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{keyError: msgAuthFailed})
 			return
 		}
 		uid, ok := userID.(uint)
 		if !ok {
 			slog.Error("RequireLogin: Unable to convert user_id to uint", "user_id", userID)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{keyError: msgAuthFailed})
 			return
 		}
 		if uid > math.MaxInt32 {
 			slog.Error("RequireLogin: user_id is out of range", "user_id", uid)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{keyError: msgAuthFailed})
 			return
 		}
 		ctx := c.Request.Context()
@@ -56,7 +61,7 @@ func RequireLogin() gin.HandlerFunc {
 		di, ok := c.MustGet(DepInjectionKey).(*DepInjection)
 		if !ok {
 			slog.Error("Unable to get dependencies from context")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Try again later"})
 			return
 		}
 		var user models.User
@@ -66,7 +71,7 @@ func RequireLogin() gin.HandlerFunc {
 		}
 
 		if !valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{keyError: msgAuthFailed})
 		}
 	}
 }

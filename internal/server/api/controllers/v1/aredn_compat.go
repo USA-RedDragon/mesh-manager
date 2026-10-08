@@ -214,12 +214,12 @@ func GETMetrics(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	if !di.Config.Metrics.Enabled {
-		c.JSON(http.StatusGone, gin.H{"error": "Metrics are not enabled"})
+		c.JSON(http.StatusGone, gin.H{keyError: "Metrics are not enabled"})
 		return
 	}
 
@@ -232,14 +232,14 @@ func GETMetrics(c *gin.Context) {
 	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, fmt.Sprintf("http://%s/metrics", hostPort), nil)
 	if err != nil {
 		slog.Error("GETMetrics: Unable to create request", "hostPort", hostPort, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	nodeResp, err := client.Do(req)
 	if err != nil {
 		slog.Error("GETMetrics: Unable to get node-exporter metrics", "hostPort", hostPort, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 	defer nodeResp.Body.Close()
@@ -256,14 +256,14 @@ func GETMetrics(c *gin.Context) {
 	req, err = http.NewRequestWithContext(c.Request.Context(), http.MethodGet, fmt.Sprintf("http://%s/metrics", hostPort), nil)
 	if err != nil {
 		slog.Error("GETMetrics: Unable to create request", "hostPort", hostPort, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	metricsResp, err := client.Do(req)
 	if err != nil {
 		slog.Error("GETMetrics: Unable to get metrics", "hostPort", hostPort, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 	defer metricsResp.Body.Close()
@@ -283,14 +283,14 @@ func GETSysinfo(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	activeTunnels, err := models.CountAllActiveTunnels(di.DB)
 	if err != nil {
 		slog.Error("GETSysinfo: Unable to get active tunnels", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
@@ -298,7 +298,7 @@ func GETSysinfo(c *gin.Context) {
 	err = syscall.Sysinfo(&info)
 	if err != nil {
 		slog.Error("GETSysinfo: Unable to get system info", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 

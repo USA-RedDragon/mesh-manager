@@ -14,7 +14,7 @@ func GETOLSRHosts(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
@@ -25,7 +25,7 @@ func GETOLSRHosts(c *gin.Context) {
 	pageInt, err := strconv.ParseInt(pageStr, 10, 64)
 	if err != nil {
 		slog.Error("error parsing page", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgInvalidPage})
 		return
 	}
 	page := int(pageInt)
@@ -37,7 +37,7 @@ func GETOLSRHosts(c *gin.Context) {
 	limitInt, err := strconv.ParseInt(limitStr, 10, 64)
 	if err != nil {
 		slog.Error("Error parsing limit:", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgInvalidLimit})
 		return
 	}
 	limit := int(limitInt)
@@ -50,20 +50,20 @@ func GETOLSRHosts(c *gin.Context) {
 	total := di.OLSRHostsParser.GetHostsCount()
 
 	nodes := di.OLSRHostsParser.GetHostsPaginated(page, limit, filter)
-	c.JSON(http.StatusOK, gin.H{"nodes": nodes, "total": total})
+	c.JSON(http.StatusOK, gin.H{keyNodes: nodes, keyTotal: total})
 }
 
 func GETOLSRHostsCount(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"nodes":    di.OLSRHostsParser.GetMeshHostsCount(),
-		"total":    di.OLSRHostsParser.GetTotalHostsCount(),
+		keyNodes:   di.OLSRHostsParser.GetMeshHostsCount(),
+		keyTotal:   di.OLSRHostsParser.GetTotalHostsCount(),
 		"services": di.OLSRServicesParser.GetServicesCount(),
 	})
 }
@@ -72,20 +72,20 @@ func GETOLSRRunning(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	if !di.Config.OLSR {
-		c.JSON(http.StatusOK, gin.H{"running": false})
+		c.JSON(http.StatusOK, gin.H{keyRunning: false})
 		return
 	}
 
 	olsrService, ok := di.ServiceRegistry.Get(services.OLSRServiceName)
 	if !ok {
 		slog.Error("Error getting OLSR service")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"running": olsrService.IsRunning()})
+	c.JSON(http.StatusOK, gin.H{keyRunning: olsrService.IsRunning()})
 }

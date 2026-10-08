@@ -22,30 +22,30 @@ func GETUsers(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 	users, err := models.ListUsers(di.PaginatedDB)
 	if err != nil {
 		slog.Error("GETUsers: Error getting users", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting users"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error getting users"})
 		return
 	}
 
 	total, err := models.CountUsers(di.DB)
 	if err != nil {
 		slog.Error("GETUsers: Error getting user count", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting user count"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error getting user count"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"total": total, "users": users})
+	c.JSON(http.StatusOK, gin.H{keyTotal: total, "users": users})
 }
 
 func POSTUser(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
@@ -53,17 +53,17 @@ func POSTUser(c *gin.Context) {
 	err := c.ShouldBindJSON(&json)
 	if err != nil {
 		slog.Error("POSTUser: JSON data is invalid", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON data is invalid"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgJSONInvalid})
 	} else {
 		isValid, errString := json.IsValidUsername()
 		if !isValid {
-			c.JSON(http.StatusBadRequest, gin.H{"error": errString})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: errString})
 			return
 		}
 
 		// Check that password isn't a zero string
 		if json.Password == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Password cannot be blank"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "Password cannot be blank"})
 			return
 		}
 
@@ -72,10 +72,10 @@ func POSTUser(c *gin.Context) {
 		err := di.DB.Find(&user, "username = ?", json.Username).Error
 		if err != nil {
 			slog.Error("POSTUser: Error getting user", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting user"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error getting user"})
 			return
 		} else if user.ID != 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Username is already taken"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "Username is already taken"})
 			return
 		}
 
@@ -90,11 +90,11 @@ func POSTUser(c *gin.Context) {
 			if err != nil {
 				// If the error message starts with "Too many requests", then tell the user to retry in one minute
 				if strings.HasPrefix(err.Error(), "Too many requests") {
-					c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many requests. Please try again in one minute"})
+					c.JSON(http.StatusTooManyRequests, gin.H{keyError: "Too many requests. Please try again in one minute"})
 					return
 				}
 				slog.Error("POSTUser: Error getting pwned passwords", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting pwned passwords"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error getting pwned passwords"})
 				return
 			}
 			strKArray := string(karray)
@@ -108,7 +108,7 @@ func POSTUser(c *gin.Context) {
 				count, err := strconv.ParseInt(strArray[1], 0, 32)
 				if err != nil {
 					slog.Error("POSTUser: Error parsing pwned password count", "error", err)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing pwned password count"})
+					c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error parsing pwned password count"})
 					return
 				}
 				if test == lrange {
@@ -116,7 +116,7 @@ func POSTUser(c *gin.Context) {
 				}
 			}
 			if result > 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Password has been reported in a data breach. Please use another one"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: "Password has been reported in a data breach. Please use another one"})
 				return
 			}
 		}
@@ -131,10 +131,10 @@ func POSTUser(c *gin.Context) {
 		err = di.DB.Create(&user).Error
 		if err != nil {
 			slog.Error("POSTUser: Error creating user", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error creating user"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"message": "User created"})
+		c.JSON(http.StatusOK, gin.H{keyMessage: "User created"})
 	}
 }
 
@@ -142,20 +142,20 @@ func GETUser(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 	id := c.Param("id")
 	// Convert string id into uint
 	userID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid User ID"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Invalid User ID"})
 		return
 	}
 	user, err := models.FindUserByID(di.DB, uint(userID))
 	if err != nil {
 		slog.Error("Error finding user", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User does not exist"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgUserDoesNotExist})
 	}
 	c.JSON(http.StatusOK, user)
 }
@@ -164,26 +164,26 @@ func PATCHUser(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	id := c.Param("id")
 	idInt, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid User ID"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Invalid User ID"})
 		return
 	}
 	var json apimodels.UserPatch
 	err = c.ShouldBindJSON(&json)
 	if err != nil {
 		slog.Error("PATCHUser: JSON data is invalid", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON data is invalid"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgJSONInvalid})
 	} else {
 		user, err := models.FindUserByID(di.DB, uint(idInt))
 		if err != nil {
 			slog.Error("Error finding user", "error", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "User does not exist"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: msgUserDoesNotExist})
 			return
 		}
 
@@ -193,10 +193,10 @@ func PATCHUser(c *gin.Context) {
 			err := di.DB.Find(&existingUser, "username = ?", json.Username).Error
 			if err != nil {
 				slog.Error("Error finding user", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error finding user"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error finding user"})
 				return
 			} else if existingUser.ID != 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Username is already taken"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: "Username is already taken"})
 				return
 			}
 			user.Username = json.Username
@@ -209,10 +209,10 @@ func PATCHUser(c *gin.Context) {
 		err = di.DB.Save(&user).Error
 		if err != nil {
 			slog.Error("Error updating user", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating user"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error updating user"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"message": "User updated"})
+		c.JSON(http.StatusOK, gin.H{keyMessage: "User updated"})
 	}
 }
 
@@ -220,40 +220,40 @@ func DELETEUser(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 	idUint64, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Invalid user ID"})
 		return
 	}
 
 	exists, err := models.UserIDExists(di.DB, uint(idUint64))
 	if err != nil {
 		slog.Error("Error checking if user exists", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error checking if user exists"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error checking if user exists"})
 		return
 	}
 	if !exists {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User does not exist"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgUserDoesNotExist})
 		return
 	}
 
 	err = models.DeleteUser(di.DB, uint(idUint64))
 	if err != nil {
 		slog.Error("Error deleting user", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting user"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error deleting user"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
+	c.JSON(http.StatusOK, gin.H{keyMessage: "User deleted"})
 }
 
 func GETUserSelf(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 	session := sessions.Default(c)
@@ -261,21 +261,21 @@ func GETUserSelf(c *gin.Context) {
 	userID := session.Get("user_id")
 	if userID == nil {
 		slog.Debug("GETUserSelf: user_id is nil")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
+		c.JSON(http.StatusUnauthorized, gin.H{keyError: "Authentication failed"})
 		return
 	}
 
 	uid, ok := userID.(uint)
 	if !ok {
 		slog.Error("GETUserSelf: Unable to convert user_id to uint", "user_id", userID)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	user, err := models.FindUserByID(di.DB, uid)
 	if err != nil {
 		slog.Error("GETUserSelf: Error finding user", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error finding user"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error finding user"})
 		return
 	}
 	c.JSON(http.StatusOK, user)

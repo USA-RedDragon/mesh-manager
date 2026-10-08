@@ -17,12 +17,17 @@ const (
 	keyD = "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD0="
 )
 
+const (
+	clientTunnelIP = "172.31.150.16"
+	serverTunnelIP = "172.31.150.20"
+)
+
 func TestDecodeClientTunnel(t *testing.T) {
 	// Dial-out tunnel: WireguardServerKey empty, Client true, password = serverPub+clientPriv+clientPub.
 	tun := models.Tunnel{
 		ID:        7,
 		Hostname:  "hub.example.org:5527",
-		IP:        "172.31.150.16",
+		IP:        clientTunnelIP,
 		Client:    true,
 		Wireguard: true,
 		Enabled:   true,
@@ -42,7 +47,7 @@ func TestDecodeClientTunnel(t *testing.T) {
 		t.Fatalf("endpoint parse incorrect: %q %q", d.endpointHost, d.endpointPort)
 	}
 	// Server IP is tunnel.IP; our IP is +1 (matches internal/wireguard offset).
-	if d.remoteIP != "172.31.150.16" || d.localIP != "172.31.150.17" {
+	if d.remoteIP != clientTunnelIP || d.localIP != "172.31.150.17" {
 		t.Fatalf("ip offset incorrect: local=%s remote=%s", d.localIP, d.remoteIP)
 	}
 }
@@ -52,7 +57,7 @@ func TestDecodeHostTunnel(t *testing.T) {
 	tun := models.Tunnel{
 		ID:                 3,
 		Hostname:           "N0CALL-CLIENT",
-		IP:                 "172.31.150.20",
+		IP:                 serverTunnelIP,
 		Client:             false,
 		Wireguard:          true,
 		Enabled:            true,
@@ -73,7 +78,7 @@ func TestDecodeHostTunnel(t *testing.T) {
 	if gotKey != wantKey {
 		t.Fatalf("aredn key incorrect:\n got %q\nwant %q", gotKey, wantKey)
 	}
-	if d.localIP != "172.31.150.20" || d.remoteIP != "172.31.150.21" {
+	if d.localIP != serverTunnelIP || d.remoteIP != "172.31.150.21" {
 		t.Fatalf("ip offset incorrect: local=%s remote=%s", d.localIP, d.remoteIP)
 	}
 }
@@ -93,8 +98,8 @@ func TestBuildReportContainsSections(t *testing.T) {
 		Babel:      config.Babel{Enabled: true, RouterID: "01:42:c0:a8:fb:05"},
 	}
 	tunnels := []models.Tunnel{
-		{ID: 1, Hostname: "hub.example.org:5527", IP: "172.31.150.16", Client: true, Wireguard: true, Enabled: true, Password: keyA + keyB + keyC},
-		{ID: 2, Hostname: "N0CALL-CLIENT", IP: "172.31.150.20", Wireguard: true, Enabled: true, WireguardPort: 5528, WireguardServerKey: keyD, Password: keyA + keyB + keyC},
+		{ID: 1, Hostname: "hub.example.org:5527", IP: clientTunnelIP, Client: true, Wireguard: true, Enabled: true, Password: keyA + keyB + keyC},
+		{ID: 2, Hostname: "N0CALL-CLIENT", IP: serverTunnelIP, Wireguard: true, Enabled: true, WireguardPort: 5528, WireguardServerKey: keyD, Password: keyA + keyB + keyC},
 		{ID: 3, Hostname: "OLD-VTUN", IP: "172.16.0.5", Wireguard: false, Enabled: true, Password: "secret"},
 	}
 	users := []models.User{{ID: 0, Username: "admin"}, {ID: 1, Username: "kc1abc"}}
@@ -107,8 +112,8 @@ func TestBuildReportContainsSections(t *testing.T) {
 		"supernode",
 		"Babel",
 		"Legacy vtun tunnels",
-		"Wireguard key: " + keyA + keyB + keyC,         // client paste blob
-		"uci -c /etc/config.mesh add wireguard server", // dial-out uci add
+		"Wireguard key: " + keyA + keyB + keyC, // client paste blob
+		"uci -c /etc/config.mesh add wireguard server",                  // dial-out uci add
 		"wireguard.@server[-1].passwd='" + keyA + keyB + keyC + "'",     // dial-out key
 		"uci -c /etc/config.mesh add wireguard client",                  // host uci add
 		"wireguard.@client[-1].key='" + keyD + keyA + keyB + keyC + "'", // host 4-key

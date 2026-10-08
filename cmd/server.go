@@ -32,8 +32,8 @@ func newServerCommand(version, commit string) *cobra.Command {
 		Version: fmt.Sprintf("%s - %s", version, commit),
 		Short:   "Start the daemon server",
 		Annotations: map[string]string{
-			"version": version,
-			"commit":  commit,
+			annotationVersion: version,
+			annotationCommit:  commit,
 		},
 		RunE:              runServer,
 		SilenceErrors:     true,

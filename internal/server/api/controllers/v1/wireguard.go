@@ -13,7 +13,7 @@ func GETWireguardGenkey(c *gin.Context) {
 	key, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
 		slog.Error("Error generating key", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating key"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error generating key"})
 		return
 	}
 
@@ -25,14 +25,14 @@ func POSTWireguardPubkey(c *gin.Context) {
 	err := c.BindJSON(&req)
 	if err != nil {
 		slog.Error("Error binding json", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Invalid request"})
 		return
 	}
 
 	private, err := wgtypes.ParseKey(req.Privkey)
 	if err != nil {
 		slog.Error("Error parsing key", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Invalid key"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"key": private.PublicKey().String()})

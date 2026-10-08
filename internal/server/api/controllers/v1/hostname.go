@@ -12,7 +12,7 @@ func GETHostname(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 

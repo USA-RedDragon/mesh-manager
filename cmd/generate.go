@@ -18,8 +18,8 @@ func newGenerateCommand(version, commit string) *cobra.Command {
 		Version: fmt.Sprintf("%s - %s", version, commit),
 		Short:   "Generate olsrd, babeld configs",
 		Annotations: map[string]string{
-			"version": version,
-			"commit":  commit,
+			annotationVersion: version,
+			annotationCommit:  commit,
 		},
 		RunE:              runGenerate,
 		SilenceErrors:     true,

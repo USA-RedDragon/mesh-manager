@@ -22,8 +22,8 @@ func newWalkCommand(version, commit string) *cobra.Command {
 		Version: fmt.Sprintf("%s - %s", version, commit),
 		Short:   "Walk the mesh and update the meshmap json",
 		Annotations: map[string]string{
-			"version": version,
-			"commit":  commit,
+			annotationVersion: version,
+			annotationCommit:  commit,
 		},
 		RunE:              runWalk,
 		SilenceErrors:     true,

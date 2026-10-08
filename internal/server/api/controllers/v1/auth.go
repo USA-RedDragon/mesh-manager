@@ -20,14 +20,14 @@ func POSTLogin(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	// If the IP is from the private ip ranges, reject the login. We cannot encrypt traffic over the mesh
 	if net.ParseIP(c.ClientIP()).IsPrivate() && !slices.Contains(di.Config.TrustedProxies, c.ClientIP()) {
 		slog.Error("POSTLogin: Login from private IP")
-		c.JSON(http.StatusUnavailableForLegalReasons, gin.H{"error": "Cannot encrypt traffic over the mesh. Please use the site via the internet."})
+		c.JSON(http.StatusUnavailableForLegalReasons, gin.H{keyError: "Cannot encrypt traffic over the mesh. Please use the site via the internet."})
 		return
 	}
 
@@ -37,23 +37,23 @@ func POSTLogin(c *gin.Context) {
 	err := c.ShouldBindJSON(&json)
 	if err != nil {
 		slog.Error("POSTLogin: JSON data is invalid", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON data is invalid"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgJSONInvalid})
 	} else {
 		// Check that one of username is not blank
 		if json.Username == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Username must be provided"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "Username must be provided"})
 			return
 		}
 		// Check that password isn't a zero string
 		if json.Password == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Password cannot be blank"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "Password cannot be blank"})
 			return
 		}
 		var user models.User
 		di.DB.Find(&user, "username = ?", json.Username)
 		if di.DB.Error != nil {
 			slog.Error("POSTLogin: Error finding user", "error", di.DB.Error)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 			return
 		}
 
@@ -65,16 +65,16 @@ func POSTLogin(c *gin.Context) {
 			err = session.Save()
 			if err != nil {
 				slog.Error("POSTLogin: Error saving session", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving session"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error saving session"})
 				return
 			}
-			c.JSON(http.StatusOK, gin.H{"message": "Logged in"})
+			c.JSON(http.StatusOK, gin.H{keyMessage: "Logged in"})
 			return
 		}
 		slog.Error("POSTLogin: Invalid username or password", "username", json.Username)
 	}
 
-	c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
+	c.JSON(http.StatusUnauthorized, gin.H{keyError: "Authentication failed"})
 }
 
 func GETLogout(c *gin.Context) {
@@ -83,10 +83,10 @@ func GETLogout(c *gin.Context) {
 	err := session.Save()
 	if err != nil {
 		slog.Error("GETLogout: Error saving session", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving session"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error saving session"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Logged out"})
+	c.JSON(http.StatusOK, gin.H{keyMessage: "Logged out"})
 }
 
 func GETAuthCheck(c *gin.Context) {

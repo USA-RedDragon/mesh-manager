@@ -29,7 +29,7 @@ func GETTunnels(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
@@ -50,7 +50,7 @@ func GETTunnels(c *gin.Context) {
 	pageInt, err := strconv.ParseInt(pageStr, 10, 64)
 	if err != nil || pageInt < 1 {
 		slog.Error("GETTunnels: Error parsing page", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgInvalidPage})
 		return
 	}
 	page := int(pageInt)
@@ -62,7 +62,7 @@ func GETTunnels(c *gin.Context) {
 	limitInt, err := strconv.ParseInt(limitStr, 10, 64)
 	if err != nil || limitInt < 1 {
 		slog.Error("GETTunnels: Error parsing limit", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgInvalidLimit})
 		return
 	}
 	limit := int(limitInt)
@@ -78,18 +78,18 @@ func GETTunnels(c *gin.Context) {
 
 		if err := dbQuery.Count(&total).Error; err != nil {
 			slog.Error("GETTunnels: Error getting tunnel count", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel count"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnelCount})
 			return
 		}
 
 		offset := (page - 1) * limit
 		if err := dbQuery.Order("id asc").Limit(limit).Offset(offset).Find(&tunnels).Error; err != nil {
 			slog.Error("GETTunnels: Error getting tunnels", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnels"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error getting tunnels"})
 			return
 		}
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid type"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Invalid type"})
 		return
 	}
 
@@ -100,7 +100,7 @@ func GETTunnels(c *gin.Context) {
 	admin, err := strconv.ParseBool(adminStr)
 	if err != nil {
 		slog.Error("GETTunnels: Error parsing admin query", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing admin query"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Error parsing admin query"})
 		return
 	}
 
@@ -109,7 +109,7 @@ func GETTunnels(c *gin.Context) {
 		session := sessions.Default(c)
 		user := session.Get("user_id")
 		if user == nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.JSON(http.StatusUnauthorized, gin.H{keyError: "Unauthorized"})
 			return
 		}
 
@@ -135,9 +135,9 @@ func GETTunnels(c *gin.Context) {
 				CreatedAt:      tunnel.CreatedAt,
 			})
 		}
-		c.JSON(http.StatusOK, gin.H{"total": total, "tunnels": tunnelsWithPass})
+		c.JSON(http.StatusOK, gin.H{keyTotal: total, "tunnels": tunnelsWithPass})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"total": total, "tunnels": tunnels})
+		c.JSON(http.StatusOK, gin.H{keyTotal: total, "tunnels": tunnels})
 	}
 }
 
@@ -145,49 +145,49 @@ func GETTunnelLQM(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	if !di.Config.LQM.Enabled {
-		c.JSON(http.StatusNotFound, gin.H{"error": "LQM is disabled"})
+		c.JSON(http.StatusNotFound, gin.H{keyError: "LQM is disabled"})
 		return
 	}
 
 	tunnelID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		slog.Error("GETTunnelLQM: Invalid tunnel id", "id", c.Param("id"), "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tunnel id"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Invalid tunnel id"})
 		return
 	}
 
 	tunnel, err := models.FindTunnelByID(di.DB, uint(tunnelID))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Tunnel not found"})
+			c.JSON(http.StatusNotFound, gin.H{keyError: "Tunnel not found"})
 			return
 		}
 
 		slog.Error("GETTunnelLQM: Error fetching tunnel", "id", tunnelID, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching tunnel"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error fetching tunnel"})
 		return
 	}
 
 	lqmInfo := getLQMInfo()
 	if lqmInfo == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "LQM data unavailable"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{keyError: "LQM data unavailable"})
 		return
 	}
 
 	trackers := normalizeLQMTrackers(lqmInfo)
 	if len(trackers) == 0 {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "LQM data unavailable"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{keyError: "LQM data unavailable"})
 		return
 	}
 
 	tracker := findTrackerForTunnel(tunnel, trackers)
 	if tracker == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No LQM data for tunnel"})
+		c.JSON(http.StatusNotFound, gin.H{keyError: "No LQM data for tunnel"})
 		return
 	}
 
@@ -228,108 +228,108 @@ func GETWireguardTunnelsCount(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	count, err := models.CountWireguardTunnels(di.DB)
 	if err != nil {
 		slog.Error("GETWireguardTunnelsCount: Error getting tunnel count", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel count"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnelCount})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"count": count})
+	c.JSON(http.StatusOK, gin.H{keyCount: count})
 }
 
 func GETWireguardTunnelsCountConnected(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	count, err := models.CountWireguardActiveTunnels(di.DB)
 	if err != nil {
 		slog.Error("GETWireguardTunnelsCountConnected: Error getting tunnel count", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel count"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnelCount})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"count": count})
+	c.JSON(http.StatusOK, gin.H{keyCount: count})
 }
 
 func GETWireguardClientTunnelsCountConnected(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	count, err := models.CountWireguardActiveClientTunnels(di.DB)
 	if err != nil {
 		slog.Error("GETWireguardClientTunnelsCountConnected: Error getting tunnel count", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel count"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnelCount})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"count": count})
+	c.JSON(http.StatusOK, gin.H{keyCount: count})
 }
 
 func GETWireguardServerTunnelsCountConnected(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	count, err := models.CountWireguardActiveServerTunnels(di.DB)
 	if err != nil {
 		slog.Error("GETWireguardServerTunnelsCountConnected: Error getting tunnel count", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel count"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnelCount})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"count": count})
+	c.JSON(http.StatusOK, gin.H{keyCount: count})
 }
 
 func GETWireguardClientTunnelsCount(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	count, err := models.CountWireguardClientTunnels(di.DB)
 	if err != nil {
 		slog.Error("GETWireguardClientTunnelsCount: Error getting tunnel count", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel count"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnelCount})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"count": count})
+	c.JSON(http.StatusOK, gin.H{keyCount: count})
 }
 
 func GETWireguardServerTunnelsCount(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	count, err := models.CountWireguardServerTunnels(di.DB)
 	if err != nil {
 		slog.Error("GETWireguardServerTunnelsCount: Error getting tunnel count", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel count"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnelCount})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"count": count})
+	c.JSON(http.StatusOK, gin.H{keyCount: count})
 }
 
 //nolint:gocyclo
@@ -337,7 +337,7 @@ func POSTTunnel(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
@@ -346,15 +346,15 @@ func POSTTunnel(c *gin.Context) {
 	err := c.ShouldBindJSON(&json)
 	if err != nil {
 		slog.Error("POSTTunnel: JSON data is invalid", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON data is invalid"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgJSONInvalid})
 	} else {
 		if (!json.Wireguard || json.Client) && json.Password == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Password cannot be empty"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "Password cannot be empty"})
 			return
 		}
 
 		if !json.Wireguard {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "VTun is disabled"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "VTun is disabled"})
 			return
 		}
 
@@ -362,7 +362,7 @@ func POSTTunnel(c *gin.Context) {
 			json.Hostname = strings.ToUpper(json.Hostname)
 			isValid, errString := json.IsValidHostname()
 			if !isValid {
-				c.JSON(http.StatusBadRequest, gin.H{"error": errString})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: errString})
 				return
 			}
 
@@ -370,10 +370,10 @@ func POSTTunnel(c *gin.Context) {
 			err := di.DB.Find(&tunnel, "hostname = ? AND wireguard = ?", json.Hostname, json.Wireguard).Error
 			if err != nil {
 				slog.Error("POSTTunnel: Error getting tunnel", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnel})
 				return
 			} else if tunnel.ID != 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Hostname is already taken"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: "Hostname is already taken"})
 				return
 			}
 
@@ -388,14 +388,14 @@ func POSTTunnel(c *gin.Context) {
 			tunnel.IP, err = models.GetNextWireguardIP(di.DB, di.Config)
 			if err != nil {
 				slog.Error("POSTTunnel: Error getting next IP", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting next IP"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error getting next IP"})
 				return
 			}
 
 			tunnel.WireguardPort, err = models.GetNextWireguardPort(di.DB, di.Config)
 			if err != nil {
 				slog.Error("POSTTunnel: Error getting next port", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting next port"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error getting next port"})
 				return
 			}
 
@@ -403,13 +403,13 @@ func POSTTunnel(c *gin.Context) {
 			serverKey, err := wgtypes.GeneratePrivateKey()
 			if err != nil {
 				slog.Error("POSTTunnel: Error generating server key", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating server key"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error generating server key"})
 				return
 			}
 			clientKey, err := wgtypes.GeneratePrivateKey()
 			if err != nil {
 				slog.Error("POSTTunnel: Error generating client key", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating client key"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error generating client key"})
 				return
 			}
 
@@ -419,33 +419,33 @@ func POSTTunnel(c *gin.Context) {
 			err = di.DB.Create(&tunnel).Error
 			if err != nil {
 				slog.Error("POSTTunnel: Error creating tunnel", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating tunnel"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error creating tunnel"})
 				return
 			}
 
 			err = di.WireguardManager.AddPeer(tunnel)
 			if err != nil {
 				slog.Error("POSTTunnel: Error adding wireguard peer", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error adding wireguard peer"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrAddingWireguardPeer})
 				return
 			}
 		} else {
 			if json.IP == "" {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "IP cannot be empty"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: "IP cannot be empty"})
 				return
 			}
 
 			if json.Wireguard {
 				// json.Hostname must not contain a port
 				if strings.Contains(json.Hostname, ":") {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Server address is invalid"})
+					c.JSON(http.StatusBadRequest, gin.H{keyError: msgServerAddressInvalid})
 					return
 				}
 
 				// json.IP must contain a port that needs to be appended to the hostname instead
 				ipParts := strings.Split(json.IP, ":")
 				if len(ipParts) != 2 {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Net is invalid"})
+					c.JSON(http.StatusBadRequest, gin.H{keyError: "Net is invalid"})
 					return
 				}
 				json.Hostname = json.Hostname + ":" + ipParts[1]
@@ -455,17 +455,17 @@ func POSTTunnel(c *gin.Context) {
 			// Check to ensure the IP is in the correct range: 172.16.0.0/12
 			ip := net.ParseIP(json.IP)
 			if ip == nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "IP is not a valid IP address"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: "IP is not a valid IP address"})
 				return
 			}
 			_, cidr, err := net.ParseCIDR("172.16.0.0/12")
 			if err != nil {
 				slog.Error("POSTTunnel: Error parsing CIDR", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing CIDR"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error parsing CIDR"})
 				return
 			}
 			if !cidr.Contains(ip) {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "IP is not in the correct range"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: "IP is not in the correct range"})
 				return
 			}
 
@@ -478,7 +478,7 @@ func POSTTunnel(c *gin.Context) {
 
 			split := strings.Split(json.Hostname, ":")
 			if len(split) > 2 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Server address is invalid"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: msgServerAddressInvalid})
 				return
 			}
 
@@ -487,14 +487,14 @@ func POSTTunnel(c *gin.Context) {
 				// Check if the hostname is a valid address
 				_, err := url.ParseRequestURI("http://" + split[0])
 				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Server address is invalid"})
+					c.JSON(http.StatusBadRequest, gin.H{keyError: msgServerAddressInvalid})
 					return
 				}
 
 				// Check that the hostname is resolvable
 				// _, err = net.LookupIP(split[0])
 				// if err != nil {
-				// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Server address is not resolvable"})
+				// 	c.JSON(http.StatusBadRequest, gin.H{keyError: "Server address is not resolvable"})
 				// 	return
 				// }
 			}
@@ -503,11 +503,11 @@ func POSTTunnel(c *gin.Context) {
 			if len(split) == 2 {
 				port, err := strconv.ParseUint(split[1], 10, 16)
 				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Server port is invalid"})
+					c.JSON(http.StatusBadRequest, gin.H{keyError: msgServerPortInvalid})
 					return
 				}
 				if port < 1 || port > 65535 {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Server port is invalid"})
+					c.JSON(http.StatusBadRequest, gin.H{keyError: msgServerPortInvalid})
 					return
 				}
 			}
@@ -516,10 +516,10 @@ func POSTTunnel(c *gin.Context) {
 			err = di.DB.Find(&tunnel, "ip = ?", json.IP).Error
 			if err != nil {
 				slog.Error("POSTTunnel: Error getting tunnel", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnel})
 				return
 			} else if tunnel.ID != 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "IP address is already taken"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: "IP address is already taken"})
 				return
 			}
 
@@ -535,25 +535,25 @@ func POSTTunnel(c *gin.Context) {
 				// The password will be 3 wireguard keys concatenated together
 				// <server_pubkey><client_privkey><client_pubkey>
 				if len(json.Password) != 132 {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Key is invalid"})
+					c.JSON(http.StatusBadRequest, gin.H{keyError: msgKeyInvalid})
 					return
 				}
 				serverPubkey := json.Password[:44]
 				_, err := wgtypes.ParseKey(serverPubkey)
 				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Key is invalid"})
+					c.JSON(http.StatusBadRequest, gin.H{keyError: msgKeyInvalid})
 					return
 				}
 				clientPrivkey := json.Password[44:88]
 				_, err = wgtypes.ParseKey(clientPrivkey)
 				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Key is invalid"})
+					c.JSON(http.StatusBadRequest, gin.H{keyError: msgKeyInvalid})
 					return
 				}
 				clientPubkey := json.Password[88:]
 				_, err = wgtypes.ParseKey(clientPubkey)
 				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Key is invalid"})
+					c.JSON(http.StatusBadRequest, gin.H{keyError: msgKeyInvalid})
 					return
 				}
 			}
@@ -561,14 +561,14 @@ func POSTTunnel(c *gin.Context) {
 			err = di.DB.Create(&tunnel).Error
 			if err != nil {
 				slog.Error("POSTTunnel: Error creating tunnel", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating tunnel"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error creating tunnel"})
 				return
 			}
 
 			err = di.WireguardManager.AddPeer(tunnel)
 			if err != nil {
 				slog.Error("POSTTunnel: Error adding wireguard peer", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error adding wireguard peer"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrAddingWireguardPeer})
 				return
 			}
 		}
@@ -577,21 +577,21 @@ func POSTTunnel(c *gin.Context) {
 			err = olsr.GenerateAndSave(di.Config, di.DB)
 			if err != nil {
 				slog.Error("POSTTunnel: Error generating olsrd config", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating olsrd config"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGeneratingOLSRDConfig})
 				return
 			}
 
 			olsrService, ok := di.ServiceRegistry.Get(services.OLSRServiceName)
 			if !ok {
 				slog.Error("POSTTunnel: Error getting olsrd service")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 				return
 			}
 
 			err = olsrService.Reload()
 			if err != nil {
 				slog.Error("POSTTunnel: Error reloading olsrd", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reloading olsrd"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrReloadingOLSRD})
 				return
 			}
 		}
@@ -600,21 +600,21 @@ func POSTTunnel(c *gin.Context) {
 			babelServiceIface, ok := di.ServiceRegistry.Get(services.BabelServiceName)
 			if !ok {
 				slog.Error("POSTTunnel: Error getting Babel service")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 				return
 			}
 
 			babelService, ok := babelServiceIface.(*babel.Service)
 			if !ok {
 				slog.Error("POSTTunnel: Error asserting Babel service")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 				return
 			}
 
 			err = babelService.AddTunnel(c.Request.Context(), wireguard.GenerateWireguardInterfaceName(tunnel))
 			if err != nil {
 				slog.Error("POSTTunnel: Error adding Babel tunnel", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error adding Babel tunnel"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error adding Babel tunnel"})
 				return
 			}
 		}
@@ -622,18 +622,18 @@ func POSTTunnel(c *gin.Context) {
 		dnsmasqService, ok := di.ServiceRegistry.Get(services.DNSMasqServiceName)
 		if !ok {
 			slog.Error("POSTTunnel: Error getting DNSMasq service")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 			return
 		}
 
 		err = dnsmasqService.Reload()
 		if err != nil {
 			slog.Error("POSTTunnel: Error reloading DNS", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reloading DNS"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrReloadingDNS})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Tunnel created"})
+		c.JSON(http.StatusOK, gin.H{keyMessage: "Tunnel created"})
 	}
 }
 
@@ -642,7 +642,7 @@ func PATCHTunnel(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
@@ -650,26 +650,26 @@ func PATCHTunnel(c *gin.Context) {
 	err := c.ShouldBindJSON(&json)
 	if err != nil {
 		slog.Error("PATCHTunnel: JSON data is invalid", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON data is invalid"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgJSONInvalid})
 	} else {
 		exists, err := models.TunnelIDExists(di.DB, json.ID)
 		if err != nil {
 			slog.Error("Error checking if tunnel exists", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error checking if tunnel exists"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error checking if tunnel exists"})
 			return
 		}
 		if !exists {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Tunnel does not exist"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "Tunnel does not exist"})
 			return
 		}
 		if json.IP == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "IP cannot be empty"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "IP cannot be empty"})
 			return
 		}
 
 		// Check to ensure the IP is valid
 		if net.ParseIP(json.IP) == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "IP is not a valid IP address"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "IP is not a valid IP address"})
 			return
 		}
 
@@ -678,11 +678,11 @@ func PATCHTunnel(c *gin.Context) {
 		_, cidr, err := net.ParseCIDR("172.16.0.0/12")
 		if err != nil {
 			slog.Error("Error parsing CIDR", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing CIDR"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error parsing CIDR"})
 			return
 		}
 		if !cidr.Contains(ip) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "IP is not in the correct range"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "IP is not in the correct range"})
 			return
 		}
 
@@ -697,7 +697,7 @@ func PATCHTunnel(c *gin.Context) {
 
 		split := strings.Split(json.Hostname, ":")
 		if len(split) > 2 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Server address is invalid"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: msgServerAddressInvalid})
 			return
 		}
 
@@ -706,14 +706,14 @@ func PATCHTunnel(c *gin.Context) {
 			// Check if the hostname is a valid address
 			_, err := url.ParseRequestURI("http://" + split[0])
 			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Server address is invalid"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: msgServerAddressInvalid})
 				return
 			}
 
 			// Check that the hostname is resolvable
 			// _, err = net.LookupIP(split[0])
 			// if err != nil {
-			// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Server address is not resolvable"})
+			// 	c.JSON(http.StatusBadRequest, gin.H{keyError: "Server address is not resolvable"})
 			// 	return
 			// }
 		}
@@ -722,11 +722,11 @@ func PATCHTunnel(c *gin.Context) {
 		if len(split) == 2 {
 			port, err := strconv.ParseUint(split[1], 10, 16)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Server port is invalid"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: msgServerPortInvalid})
 				return
 			}
 			if port < 1 || port > 65535 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Server port is invalid"})
+				c.JSON(http.StatusBadRequest, gin.H{keyError: msgServerPortInvalid})
 				return
 			}
 		}
@@ -736,10 +736,10 @@ func PATCHTunnel(c *gin.Context) {
 		err = di.DB.Find(&tunnel, "ip = ?", json.IP).Error
 		if err != nil {
 			slog.Error("Error getting tunnel", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnel})
 			return
 		} else if tunnel.ID != 0 && tunnel.ID != json.ID {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "IP address is already taken"})
+			c.JSON(http.StatusBadRequest, gin.H{keyError: "IP address is already taken"})
 			return
 		}
 
@@ -754,34 +754,34 @@ func PATCHTunnel(c *gin.Context) {
 			err = di.DB.Model(&tunnel).Updates(models.Tunnel{Enabled: *json.Enabled}).Error
 			if err != nil {
 				slog.Error("Error updating tunnel", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating tunnel"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error updating tunnel"})
 				return
 			}
 		}
 
 		if tunnel.Wireguard != *json.Wireguard {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Changing tunnel type not allowed"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Changing tunnel type not allowed"})
 			return
 		}
 
 		err = di.DB.Save(&tunnel).Error
 		if err != nil {
 			slog.Error("Error saving tunnel", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving tunnel"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error saving tunnel"})
 			return
 		}
 
 		err = di.WireguardManager.RemovePeer(origTunnel)
 		if err != nil {
 			slog.Error("Error removing wireguard peer", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error adding wireguard peer"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrAddingWireguardPeer})
 			return
 		}
 
 		err = di.WireguardManager.AddPeer(tunnel)
 		if err != nil {
 			slog.Error("Error adding wireguard peer", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error adding wireguard peer"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrAddingWireguardPeer})
 			return
 		}
 
@@ -789,21 +789,21 @@ func PATCHTunnel(c *gin.Context) {
 			err = olsr.GenerateAndSave(di.Config, di.DB)
 			if err != nil {
 				slog.Error("Error generating olsrd config", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating olsrd config"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGeneratingOLSRDConfig})
 				return
 			}
 
 			olsrService, ok := di.ServiceRegistry.Get(services.OLSRServiceName)
 			if !ok {
 				slog.Error("Error getting OLSR service")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 				return
 			}
 
 			err = olsrService.Reload()
 			if err != nil {
 				slog.Error("Error reloading olsrd", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reloading olsrd"})
+				c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrReloadingOLSRD})
 				return
 			}
 		}
@@ -811,18 +811,18 @@ func PATCHTunnel(c *gin.Context) {
 		dnsmasqService, ok := di.ServiceRegistry.Get(services.DNSMasqServiceName)
 		if !ok {
 			slog.Error("Error getting DNSMasq service")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 			return
 		}
 
 		err = dnsmasqService.Reload()
 		if err != nil {
 			slog.Error("Error reloading DNS", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reloading DNS"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrReloadingDNS})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Tunnel updated"})
+		c.JSON(http.StatusOK, gin.H{keyMessage: "Tunnel updated"})
 	}
 }
 
@@ -830,45 +830,45 @@ func DELETETunnel(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	idUint64, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tunnel ID"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Invalid tunnel ID"})
 		return
 	}
 
 	exists, err := models.TunnelIDExists(di.DB, uint(idUint64))
 	if err != nil {
 		slog.Error("Error checking if tunnel exists", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error checking if tunnel exists"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error checking if tunnel exists"})
 		return
 	}
 	if !exists {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Tunnel does not exist"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: "Tunnel does not exist"})
 		return
 	}
 
 	tunnel, err := models.FindTunnelByID(di.DB, uint(idUint64))
 	if err != nil {
 		slog.Error("Error getting tunnel", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting tunnel"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGettingTunnel})
 		return
 	}
 
 	err = models.DeleteTunnel(di.DB, uint(idUint64))
 	if err != nil {
 		slog.Error("Error deleting tunnel", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting tunnel"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error deleting tunnel"})
 		return
 	}
 
 	err = di.WireguardManager.RemovePeer(tunnel)
 	if err != nil {
 		slog.Error("Error removing wireguard peer", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error removing wireguard peer"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error removing wireguard peer"})
 		return
 	}
 
@@ -876,21 +876,21 @@ func DELETETunnel(c *gin.Context) {
 		err = olsr.GenerateAndSave(di.Config, di.DB)
 		if err != nil {
 			slog.Error("Error generating olsrd config", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating olsrd config"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrGeneratingOLSRDConfig})
 			return
 		}
 
 		olsrService, ok := di.ServiceRegistry.Get(services.OLSRServiceName)
 		if !ok {
 			slog.Error("Error getting OLSR service")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 			return
 		}
 
 		err = olsrService.Reload()
 		if err != nil {
 			slog.Error("Error reloading olsrd", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reloading olsrd"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrReloadingOLSRD})
 			return
 		}
 	}
@@ -899,21 +899,21 @@ func DELETETunnel(c *gin.Context) {
 		babelServiceIface, ok := di.ServiceRegistry.Get(services.BabelServiceName)
 		if !ok {
 			slog.Error("DELETETunnel: Error getting Babel service")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 			return
 		}
 
 		babelService, ok := babelServiceIface.(*babel.Service)
 		if !ok {
 			slog.Error("DELETETunnel: Error asserting Babel service")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 			return
 		}
 
 		err = babelService.RemoveTunnel(c.Request.Context(), wireguard.GenerateWireguardInterfaceName(tunnel))
 		if err != nil {
 			slog.Error("DELETETunnel: Error removing Babel tunnel", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error removing Babel tunnel"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error removing Babel tunnel"})
 			return
 		}
 	}
@@ -921,18 +921,18 @@ func DELETETunnel(c *gin.Context) {
 	dnsmasqService, ok := di.ServiceRegistry.Get(services.DNSMasqServiceName)
 	if !ok {
 		slog.Error("Error getting DNSMasq service")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	err = dnsmasqService.Reload()
 	if err != nil {
 		slog.Error("Error reloading DNS", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reloading DNS"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgErrReloadingDNS})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Tunnel deleted"})
+	c.JSON(http.StatusOK, gin.H{keyMessage: "Tunnel deleted"})
 }
 
 func normalizeLQMTrackers(info *lqm.LQMInfo) map[string]lqm.Tracker {

@@ -12,28 +12,28 @@ import (
 func POSTNotify(c *gin.Context) {
 	if (c.RemoteIP() != "127.0.0.1" && c.RemoteIP() != "::1") || c.GetHeader("X-Forwarded-For") != "" {
 		slog.Warn("POSTNotify: Forbidden notify", "ip", c.RemoteIP())
-		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+		c.JSON(http.StatusForbidden, gin.H{keyError: "Forbidden"})
 		return
 	}
 
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	dnsmasqService, ok := di.ServiceRegistry.Get(services.DNSMasqServiceName)
 	if !ok {
 		slog.Error("POSTNotify: Error getting DNSMasq service")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	err := dnsmasqService.Reload()
 	if err != nil {
 		slog.Error("POSTNotify: Error reloading DNSMasq service", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error regenerating DNS"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error regenerating DNS"})
 		return
 	}
 
@@ -41,14 +41,14 @@ func POSTNotify(c *gin.Context) {
 		err := di.OLSRHostsParser.Parse()
 		if err != nil {
 			slog.Error("POSTNotify: Error parsing hosts", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing hosts"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error parsing hosts"})
 			return
 		}
 
 		err = di.OLSRServicesParser.Parse()
 		if err != nil {
 			slog.Error("POSTNotify: Error parsing services", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing services"})
+			c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error parsing services"})
 			return
 		}
 	}()

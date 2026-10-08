@@ -51,8 +51,8 @@ func newMigrateCommand(version, commit string) *cobra.Command {
 			"sanctioned by AREDN, Inc.; the image runs unmodified upstream AREDN® firmware.",
 		Version: fmt.Sprintf("%s - %s", version, commit),
 		Annotations: map[string]string{
-			"version": version,
-			"commit":  commit,
+			annotationVersion: version,
+			annotationCommit:  commit,
 		},
 		RunE:              runMigrate,
 		SilenceErrors:     true,

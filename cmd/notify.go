@@ -17,8 +17,8 @@ func newNotifyCommand(version, commit string) *cobra.Command {
 		Version: fmt.Sprintf("%s - %s", version, commit),
 		Short:   "Notify the daemon of a change in the mesh",
 		Annotations: map[string]string{
-			"version": version,
-			"commit":  commit,
+			annotationVersion: version,
+			annotationCommit:  commit,
 		},
 		RunE:              runNotify,
 		SilenceErrors:     true,

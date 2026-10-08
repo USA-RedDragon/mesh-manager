@@ -15,13 +15,13 @@ func GETBabelHosts(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	if err := di.MeshLinkParser.Parse(); err != nil {
 		slog.Error("GETBabelHosts: Error parsing meshlink data", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing mesh hosts"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error parsing mesh hosts"})
 		return
 	}
 
@@ -32,7 +32,7 @@ func GETBabelHosts(c *gin.Context) {
 	pageInt, err := strconv.ParseInt(pageStr, 10, 64)
 	if err != nil {
 		slog.Error("error parsing page", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgInvalidPage})
 		return
 	}
 	page := int(pageInt)
@@ -44,7 +44,7 @@ func GETBabelHosts(c *gin.Context) {
 	limitInt, err := strconv.ParseInt(limitStr, 10, 64)
 	if err != nil {
 		slog.Error("Error parsing limit:", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+		c.JSON(http.StatusBadRequest, gin.H{keyError: msgInvalidLimit})
 		return
 	}
 	limit := int(limitInt)
@@ -57,26 +57,26 @@ func GETBabelHosts(c *gin.Context) {
 	total := di.MeshLinkParser.GetHostsCount()
 
 	nodes := di.MeshLinkParser.GetHostsPaginated(page, limit, filter)
-	c.JSON(http.StatusOK, gin.H{"nodes": nodes, "total": total})
+	c.JSON(http.StatusOK, gin.H{keyNodes: nodes, keyTotal: total})
 }
 
 func GETBabelHostsCount(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	if err := di.MeshLinkParser.Parse(); err != nil {
 		slog.Error("GETBabelHostsCount: Error parsing meshlink data", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing mesh hosts"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Error parsing mesh hosts"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"nodes":    di.MeshLinkParser.GetNodeHostsCount(),
-		"total":    di.MeshLinkParser.GetTotalHostsCount(),
+		keyNodes:   di.MeshLinkParser.GetNodeHostsCount(),
+		keyTotal:   di.MeshLinkParser.GetTotalHostsCount(),
 		"services": di.MeshLinkParser.GetServiceCount(),
 	})
 }
@@ -85,24 +85,24 @@ func GETBabelRunning(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	if !di.Config.Babel.Enabled {
 		slog.Info("Babel service is not enabled in the configuration")
-		c.JSON(http.StatusOK, gin.H{"running": false})
+		c.JSON(http.StatusOK, gin.H{keyRunning: false})
 		return
 	}
 
 	babelService, ok := di.ServiceRegistry.Get(services.BabelServiceName)
 	if !ok {
 		slog.Error("Error getting Babel service")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"running": babelService.IsRunning()})
+	c.JSON(http.StatusOK, gin.H{keyRunning: babelService.IsRunning()})
 }
 
 // GETBabelETX returns a map of destination IPv4 addresses to their Babel ETX metrics.
@@ -111,19 +111,19 @@ func GETBabelETX(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	if !di.Config.Babel.Enabled {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Babel is disabled"})
+		c.JSON(http.StatusNotFound, gin.H{keyError: "Babel is disabled"})
 		return
 	}
 
 	etxByIP, err := babel.FetchInstalledRouteMetrics(c.Request.Context())
 	if err != nil {
 		slog.Error("GETBabelETX: Failed to query Babel", "error", err)
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Failed to query Babel"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{keyError: "Failed to query Babel"})
 		return
 	}
 

@@ -10,7 +10,7 @@ import (
 func GETLoadAvg(c *gin.Context) {
 	loadavg, err := utils.GetLoadAvg()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get load average"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: "Unable to get load average"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"loadavg": loadavg})

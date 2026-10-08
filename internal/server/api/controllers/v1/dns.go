@@ -13,15 +13,15 @@ func GETDNSRunning(c *gin.Context) {
 	di, ok := c.MustGet(middleware.DepInjectionKey).(*middleware.DepInjection)
 	if !ok {
 		slog.Error("Unable to get dependencies from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
 
 	dnsmasqService, ok := di.ServiceRegistry.Get(services.DNSMasqServiceName)
 	if !ok {
 		slog.Error("Error getting DNSMasq service")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Try again later"})
+		c.JSON(http.StatusInternalServerError, gin.H{keyError: msgTryAgainLater})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"running": dnsmasqService.IsRunning()})
+	c.JSON(http.StatusOK, gin.H{keyRunning: dnsmasqService.IsRunning()})
 }
