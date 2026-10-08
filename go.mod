@@ -4,7 +4,7 @@ go 1.27.2
 
 require (
 	github.com/JGLTechnologies/gin-rate-limit v1.5.9
-	github.com/USA-RedDragon/configulator/v2 v2.3.2
+	github.com/USA-RedDragon/configulator/v2 v2.4.0
 	github.com/gin-contrib/cors v1.7.9
 	github.com/gin-contrib/pprof v1.5.6
 	github.com/gin-contrib/sessions v1.1.2

@@ -5,67 +5,76 @@
 package config
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+	"errors"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/spf13/pflag"
 	"math"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
+	"github.com/spf13/pflag"
 )
 
 type pProfShadow struct {
 	Enabled *bool `json:"enabled" toml:"enabled" yaml:"enabled"`
 }
+
 type postgresShadow struct {
-	Host     *string `json:"host" toml:"host" yaml:"host"`
-	Port     *int    `json:"port" toml:"port" yaml:"port"`
-	User     *string `json:"user" toml:"user" yaml:"user"`
+	Host     *string `json:"host"     toml:"host"     yaml:"host"`
+	Port     *int    `json:"port"     toml:"port"     yaml:"port"`
+	User     *string `json:"user"     toml:"user"     yaml:"user"`
 	Password *string `json:"password" toml:"password" yaml:"password"`
 	Database *string `json:"database" toml:"database" yaml:"database"`
 }
+
 type babelShadow struct {
-	Enabled  *bool   `json:"enabled" toml:"enabled" yaml:"enabled"`
+	Enabled  *bool   `json:"enabled"   toml:"enabled"   yaml:"enabled"`
 	RouterID *string `json:"router-id" toml:"router-id" yaml:"router-id"`
 }
+
 type metricsShadow struct {
-	Enabled          *bool   `json:"enabled" toml:"enabled" yaml:"enabled"`
+	Enabled          *bool   `json:"enabled"            toml:"enabled"            yaml:"enabled"`
 	NodeExporterHost *string `json:"node-exporter-host" toml:"node-exporter-host" yaml:"node-exporter-host"`
-	Port             *int    `json:"port" toml:"port" yaml:"port"`
+	Port             *int    `json:"port"               toml:"port"               yaml:"port"`
 }
+
 type wireguardShadow struct {
 	StartingAddress *string `json:"starting-address" toml:"starting-address" yaml:"starting-address"`
-	StartingPort    *uint16 `json:"starting-port" toml:"starting-port" yaml:"starting-port"`
+	StartingPort    *uint16 `json:"starting-port"    toml:"starting-port"    yaml:"starting-port"`
 }
+
 type lQMShadow struct {
 	Enabled *bool `json:"enabled" toml:"enabled" yaml:"enabled"`
 }
+
 type configShadow struct {
-	LogLevel                 *string          `json:"log-level" toml:"log-level" yaml:"log-level"`
-	Port                     *int             `json:"port" toml:"port" yaml:"port"`
-	PasswordSalt             *string          `json:"password-salt" toml:"password-salt" yaml:"password-salt"`
-	PProf                    *pProfShadow     `json:"pprof" toml:"pprof" yaml:"pprof"`
-	Postgres                 *postgresShadow  `json:"postgres" toml:"postgres" yaml:"postgres"`
+	LogLevel                 *string          `json:"log-level"                   toml:"log-level"                   yaml:"log-level"`
+	Port                     *int             `json:"port"                        toml:"port"                        yaml:"port"`
+	PasswordSalt             *string          `json:"password-salt"               toml:"password-salt"               yaml:"password-salt"`
+	PProf                    *pProfShadow     `json:"pprof"                       toml:"pprof"                       yaml:"pprof"`
+	Postgres                 *postgresShadow  `json:"postgres"                    toml:"postgres"                    yaml:"postgres"`
 	InitialAdminUserPassword *string          `json:"initial-admin-user-password" toml:"initial-admin-user-password" yaml:"initial-admin-user-password"`
-	Babel                    *babelShadow     `json:"babel" toml:"babel" yaml:"babel"`
-	OLSR                     *bool            `json:"olsr" toml:"olsr" yaml:"olsr"`
-	CORSHosts                *[]string        `json:"cors-hosts" toml:"cors-hosts" yaml:"cors-hosts"`
-	TrustedProxies           *[]string        `json:"trusted-proxies" toml:"trusted-proxies" yaml:"trusted-proxies"`
-	HIBPAPIKey               *string          `json:"hibp-api-key" toml:"hibp-api-key" yaml:"hibp-api-key"`
-	ServerName               *string          `json:"server-name" toml:"server-name" yaml:"server-name"`
-	Supernode                *bool            `json:"supernode" toml:"supernode" yaml:"supernode"`
-	NodeIP                   *string          `json:"node-ip" toml:"node-ip" yaml:"node-ip"`
-	Latitude                 *float64         `json:"latitude" toml:"latitude" yaml:"latitude"`
-	Longitude                *float64         `json:"longitude" toml:"longitude" yaml:"longitude"`
-	Gridsquare               *string          `json:"gridsquare" toml:"gridsquare" yaml:"gridsquare"`
-	Metrics                  *metricsShadow   `json:"metrics" toml:"metrics" yaml:"metrics"`
-	Wireguard                *wireguardShadow `json:"wireguard" toml:"wireguard" yaml:"wireguard"`
-	SessionSecret            *string          `json:"session-secret" toml:"session-secret" yaml:"session-secret"`
-	LQM                      *lQMShadow       `json:"lqm" toml:"lqm" yaml:"lqm"`
-	Walker                   *bool            `json:"walker" toml:"walker" yaml:"walker"`
+	Babel                    *babelShadow     `json:"babel"                       toml:"babel"                       yaml:"babel"`
+	OLSR                     *bool            `json:"olsr"                        toml:"olsr"                        yaml:"olsr"`
+	CORSHosts                *[]string        `json:"cors-hosts"                  toml:"cors-hosts"                  yaml:"cors-hosts"`
+	TrustedProxies           *[]string        `json:"trusted-proxies"             toml:"trusted-proxies"             yaml:"trusted-proxies"`
+	HIBPAPIKey               *string          `json:"hibp-api-key"                toml:"hibp-api-key"                yaml:"hibp-api-key"`
+	ServerName               *string          `json:"server-name"                 toml:"server-name"                 yaml:"server-name"`
+	Supernode                *bool            `json:"supernode"                   toml:"supernode"                   yaml:"supernode"`
+	NodeIP                   *string          `json:"node-ip"                     toml:"node-ip"                     yaml:"node-ip"`
+	Latitude                 *float64         `json:"latitude"                    toml:"latitude"                    yaml:"latitude"`
+	Longitude                *float64         `json:"longitude"                   toml:"longitude"                   yaml:"longitude"`
+	Gridsquare               *string          `json:"gridsquare"                  toml:"gridsquare"                  yaml:"gridsquare"`
+	Metrics                  *metricsShadow   `json:"metrics"                     toml:"metrics"                     yaml:"metrics"`
+	Wireguard                *wireguardShadow `json:"wireguard"                   toml:"wireguard"                   yaml:"wireguard"`
+	SessionSecret            *string          `json:"session-secret"              toml:"session-secret"              yaml:"session-secret"`
+	LQM                      *lQMShadow       `json:"lqm"                         toml:"lqm"                         yaml:"lqm"`
+	Walker                   *bool            `json:"walker"                      toml:"walker"                      yaml:"walker"`
 }
 
 // ConfigSchema returns the generated schema for Config.
@@ -76,7 +85,8 @@ func ConfigSchema() *configulator.Schema[Config] {
 		DecodeFile:    configDecodeFile,
 	}
 }
-func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
+
+func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) error {
 	cfg.LogLevel = LogLevel("info")
 	set("log-level", configulator.LayerDefault, "default tag")
 	cfg.Port = 3333
@@ -101,6 +111,7 @@ func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) er
 	set("walker", configulator.LayerDefault, "default tag")
 	return nil
 }
+
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
@@ -111,7 +122,8 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep st
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
+
+func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin, file string) error {
 	if s.LogLevel != nil {
 		cfg.LogLevel = LogLevel(*s.LogLevel)
 		set("log-level", configulator.LayerFile, file)
@@ -246,305 +258,246 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 	}
 	return nil
 }
+
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "log-level"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.LogLevel = LogLevel(v)
-			set("log-level", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "log-level"); ok {
+		cfg.LogLevel = LogLevel(v)
+		set("log-level", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "port",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "port"); ok {
+		p, err := strconv.ParseInt(v, 10, strconv.IntSize)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "port",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Port = int(p)
-			set("port", configulator.LayerEnv, n)
 		}
+		cfg.Port = int(p)
+		set("port", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "password-salt"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.PasswordSalt = v
-			set("password-salt", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "password-salt"); ok {
+		cfg.PasswordSalt = v
+		set("password-salt", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "pprof", "enabled"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "pprof.enabled",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "pprof", "enabled"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "pprof.enabled",
+				Source: n,
+				Value:  v,
 			}
-			cfg.PProf.Enabled = p
-			set("pprof.enabled", configulator.LayerEnv, n)
 		}
+		cfg.PProf.Enabled = p
+		set("pprof.enabled", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "postgres", "host"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Postgres.Host = v
-			set("postgres.host", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "postgres", "host"); ok {
+		cfg.Postgres.Host = v
+		set("postgres.host", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "postgres", "port"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "postgres.port",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "postgres", "port"); ok {
+		p, err := strconv.ParseInt(v, 10, strconv.IntSize)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "postgres.port",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Postgres.Port = int(p)
-			set("postgres.port", configulator.LayerEnv, n)
 		}
+		cfg.Postgres.Port = int(p)
+		set("postgres.port", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "postgres", "user"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Postgres.User = v
-			set("postgres.user", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "postgres", "user"); ok {
+		cfg.Postgres.User = v
+		set("postgres.user", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "postgres", "password"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Postgres.Password = v
-			set("postgres.password", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "postgres", "password"); ok {
+		cfg.Postgres.Password = v
+		set("postgres.password", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "postgres", "database"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Postgres.Database = v
-			set("postgres.database", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "postgres", "database"); ok {
+		cfg.Postgres.Database = v
+		set("postgres.database", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "initial-admin-user-password"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.InitialAdminUserPassword = v
-			set("initial-admin-user-password", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "initial-admin-user-password"); ok {
+		cfg.InitialAdminUserPassword = v
+		set("initial-admin-user-password", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "babel", "enabled"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "babel.enabled",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "babel", "enabled"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "babel.enabled",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Babel.Enabled = p
-			set("babel.enabled", configulator.LayerEnv, n)
 		}
+		cfg.Babel.Enabled = p
+		set("babel.enabled", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "babel", "router-id"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Babel.RouterID = v
-			set("babel.router-id", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "babel", "router-id"); ok {
+		cfg.Babel.RouterID = v
+		set("babel.router-id", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "olsr"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "olsr",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "olsr"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "olsr",
+				Source: n,
+				Value:  v,
 			}
-			cfg.OLSR = p
-			set("olsr", configulator.LayerEnv, n)
 		}
+		cfg.OLSR = p
+		set("olsr", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "cors-hosts"); true {
-		if v, ok := ec.Getenv(n); ok {
-			lst := configulator.SplitList(v, ec.ArraySeparator)
-			cfg.CORSHosts = lst
-			set("cors-hosts", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "cors-hosts"); ok {
+		lst := impl.SplitList(v, ec.ArraySeparator)
+		cfg.CORSHosts = lst
+		set("cors-hosts", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "trusted-proxies"); true {
-		if v, ok := ec.Getenv(n); ok {
-			lst := configulator.SplitList(v, ec.ArraySeparator)
-			cfg.TrustedProxies = lst
-			set("trusted-proxies", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "trusted-proxies"); ok {
+		lst := impl.SplitList(v, ec.ArraySeparator)
+		cfg.TrustedProxies = lst
+		set("trusted-proxies", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "hibp-api-key"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.HIBPAPIKey = v
-			set("hibp-api-key", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "hibp-api-key"); ok {
+		cfg.HIBPAPIKey = v
+		set("hibp-api-key", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "server-name"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.ServerName = v
-			set("server-name", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "server-name"); ok {
+		cfg.ServerName = v
+		set("server-name", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "supernode"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "supernode",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "supernode"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "supernode",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Supernode = p
-			set("supernode", configulator.LayerEnv, n)
 		}
+		cfg.Supernode = p
+		set("supernode", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "node-ip"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.NodeIP = v
-			set("node-ip", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "node-ip"); ok {
+		cfg.NodeIP = v
+		set("node-ip", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "latitude"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseFloat(v, 64)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "latitude",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "latitude"); ok {
+		p, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "latitude",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Latitude = p
-			set("latitude", configulator.LayerEnv, n)
 		}
+		cfg.Latitude = p
+		set("latitude", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "longitude"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseFloat(v, 64)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "longitude",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "longitude"); ok {
+		p, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "longitude",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Longitude = p
-			set("longitude", configulator.LayerEnv, n)
 		}
+		cfg.Longitude = p
+		set("longitude", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "gridsquare"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Gridsquare = v
-			set("gridsquare", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "gridsquare"); ok {
+		cfg.Gridsquare = v
+		set("gridsquare", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "metrics", "enabled"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "metrics.enabled",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "metrics", "enabled"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "metrics.enabled",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Metrics.Enabled = p
-			set("metrics.enabled", configulator.LayerEnv, n)
 		}
+		cfg.Metrics.Enabled = p
+		set("metrics.enabled", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "metrics", "node-exporter-host"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Metrics.NodeExporterHost = v
-			set("metrics.node-exporter-host", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "metrics", "node-exporter-host"); ok {
+		cfg.Metrics.NodeExporterHost = v
+		set("metrics.node-exporter-host", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "metrics", "port"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "metrics.port",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "metrics", "port"); ok {
+		p, err := strconv.ParseInt(v, 10, strconv.IntSize)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "metrics.port",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Metrics.Port = int(p)
-			set("metrics.port", configulator.LayerEnv, n)
 		}
+		cfg.Metrics.Port = int(p)
+		set("metrics.port", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "wireguard", "starting-address"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Wireguard.StartingAddress = v
-			set("wireguard.starting-address", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "wireguard", "starting-address"); ok {
+		cfg.Wireguard.StartingAddress = v
+		set("wireguard.starting-address", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "wireguard", "starting-port"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseUint(v, 10, 16)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "wireguard.starting-port",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "wireguard", "starting-port"); ok {
+		p, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "wireguard.starting-port",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Wireguard.StartingPort = uint16(p)
-			set("wireguard.starting-port", configulator.LayerEnv, n)
 		}
+		cfg.Wireguard.StartingPort = uint16(p)
+		set("wireguard.starting-port", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "session-secret"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.SessionSecret = v
-			set("session-secret", configulator.LayerEnv, n)
-		}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "session-secret"); ok {
+		cfg.SessionSecret = v
+		set("session-secret", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "lqm", "enabled"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "lqm.enabled",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "lqm", "enabled"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "lqm.enabled",
+				Source: n,
+				Value:  v,
 			}
-			cfg.LQM.Enabled = p
-			set("lqm.enabled", configulator.LayerEnv, n)
 		}
+		cfg.LQM.Enabled = p
+		set("lqm.enabled", configulator.LayerEnv, n)
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "walker"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "walker",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "walker"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "walker",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Walker = p
-			set("walker", configulator.LayerEnv, n)
 		}
+		cfg.Walker = p
+		set("walker", configulator.LayerEnv, n)
 	}
 	return nil
 }
@@ -556,10 +509,48 @@ func ConfigPFlagHooks() cpflag.Hooks[Config] {
 		Register: configRegisterPFlags,
 	}
 }
+
 func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"log-level"}, o.Separator), strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"password-salt"}, o.Separator), strings.Join([]string{"pprof", "enabled"}, o.Separator), strings.Join([]string{"postgres", "host"}, o.Separator), strings.Join([]string{"postgres", "port"}, o.Separator), strings.Join([]string{"postgres", "user"}, o.Separator), strings.Join([]string{"postgres", "password"}, o.Separator), strings.Join([]string{"postgres", "database"}, o.Separator), strings.Join([]string{"initial-admin-user-password"}, o.Separator), strings.Join([]string{"babel", "enabled"}, o.Separator), strings.Join([]string{"babel", "router-id"}, o.Separator), strings.Join([]string{"olsr"}, o.Separator), strings.Join([]string{"cors-hosts"}, o.Separator), strings.Join([]string{"trusted-proxies"}, o.Separator), strings.Join([]string{"hibp-api-key"}, o.Separator), strings.Join([]string{"server-name"}, o.Separator), strings.Join([]string{"supernode"}, o.Separator), strings.Join([]string{"node-ip"}, o.Separator), strings.Join([]string{"latitude"}, o.Separator), strings.Join([]string{"longitude"}, o.Separator), strings.Join([]string{"gridsquare"}, o.Separator), strings.Join([]string{"metrics", "enabled"}, o.Separator), strings.Join([]string{"metrics", "node-exporter-host"}, o.Separator), strings.Join([]string{"metrics", "port"}, o.Separator), strings.Join([]string{"wireguard", "starting-address"}, o.Separator), strings.Join([]string{"wireguard", "starting-port"}, o.Separator), strings.Join([]string{"session-secret"}, o.Separator), strings.Join([]string{"lqm", "enabled"}, o.Separator), strings.Join([]string{"walker"}, o.Separator)}
+	names := []string{
+		"log-level",
+		"port",
+		"password-salt",
+		"pprof" + o.Separator + "enabled",
+		"postgres" + o.Separator + "host",
+		"postgres" + o.Separator + "port",
+		"postgres" + o.Separator + "user",
+		"postgres" + o.Separator + "password",
+		"postgres" + o.Separator + "database",
+		"initial-admin-user-password",
+		"babel" + o.Separator + "enabled",
+		"babel" + o.Separator + "router-id",
+		"olsr",
+		"cors-hosts",
+		"trusted-proxies",
+		"hibp-api-key",
+		"server-name",
+		"supernode",
+		"node-ip",
+		"latitude",
+		"longitude",
+		"gridsquare",
+		"metrics" + o.Separator + "enabled",
+		"metrics" + o.Separator + "node-exporter-host",
+		"metrics" + o.Separator + "port",
+		"wireguard" + o.Separator + "starting-address",
+		"wireguard" + o.Separator + "starting-port",
+		"session-secret",
+		"lqm" + o.Separator + "enabled",
+		"walker",
+	}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
@@ -567,11 +558,11 @@ func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 		}
 	}
 	fs.String(names[0], "info", "Logging level for the application. One of debug, info, warn, or error")
-	fs.Int(names[1], 3333, "Port to listen on for HTTP requests")
+	fs.Var(impl.NewInt(3333), names[1], "Port to listen on for HTTP requests")
 	fs.String(names[2], "", "Salt used for password hashing")
 	fs.Bool(names[3], false, "Enable pprof debugging")
 	fs.String(names[4], "", "PostgreSQL host")
-	fs.Int(names[5], 5432, "PostgreSQL port")
+	fs.Var(impl.NewInt(5432), names[5], "PostgreSQL port")
 	fs.String(names[6], "", "PostgreSQL user")
 	fs.String(names[7], "", "PostgreSQL password")
 	fs.String(names[8], "", "PostgreSQL database")
@@ -590,16 +581,17 @@ func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.String(names[21], "", "Server gridsquare")
 	fs.Bool(names[22], false, "Enable Prometheus metrics")
 	fs.String(names[23], "node-exporter", "Node exporter host for Prometheus metrics")
-	fs.Int(names[24], 9100, "Port for Prometheus metrics")
+	fs.Var(impl.NewInt(9100), names[24], "Port for Prometheus metrics")
 	fs.String(names[25], "", "Starting address for Wireguard")
-	fs.Uint16(names[26], uint16(5527), "Starting port for Wireguard")
+	fs.Uint16(names[26], 5527, "Starting port for Wireguard")
 	fs.String(names[27], "", "Session secret")
 	fs.Bool(names[28], true, "Enable Link Quality Monitoring")
 	fs.Bool(names[29], false, "Enable periodic mesh walking to update meshmap")
 	return nil
 }
-func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"log-level"}, o.Separator); fs.Changed(n) {
+
+func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, _ string, set configulator.SetOrigin) error {
+	if n := "log-level"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -611,7 +603,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.LogLevel = LogLevel(v)
 		set("log-level", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"port"}, o.Separator); fs.Changed(n) {
+	if n := "port"; fs.Changed(n) {
 		v, err := fs.GetInt(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -623,7 +615,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Port = v
 		set("port", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"password-salt"}, o.Separator); fs.Changed(n) {
+	if n := "password-salt"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -635,7 +627,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.PasswordSalt = v
 		set("password-salt", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"pprof", "enabled"}, o.Separator); fs.Changed(n) {
+	if n := "pprof" + o.Separator + "enabled"; fs.Changed(n) {
 		v, err := fs.GetBool(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -647,7 +639,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.PProf.Enabled = v
 		set("pprof.enabled", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"postgres", "host"}, o.Separator); fs.Changed(n) {
+	if n := "postgres" + o.Separator + "host"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -659,7 +651,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Postgres.Host = v
 		set("postgres.host", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"postgres", "port"}, o.Separator); fs.Changed(n) {
+	if n := "postgres" + o.Separator + "port"; fs.Changed(n) {
 		v, err := fs.GetInt(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -671,7 +663,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Postgres.Port = v
 		set("postgres.port", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"postgres", "user"}, o.Separator); fs.Changed(n) {
+	if n := "postgres" + o.Separator + "user"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -683,7 +675,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Postgres.User = v
 		set("postgres.user", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"postgres", "password"}, o.Separator); fs.Changed(n) {
+	if n := "postgres" + o.Separator + "password"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -695,7 +687,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Postgres.Password = v
 		set("postgres.password", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"postgres", "database"}, o.Separator); fs.Changed(n) {
+	if n := "postgres" + o.Separator + "database"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -707,7 +699,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Postgres.Database = v
 		set("postgres.database", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"initial-admin-user-password"}, o.Separator); fs.Changed(n) {
+	if n := "initial-admin-user-password"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -719,7 +711,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.InitialAdminUserPassword = v
 		set("initial-admin-user-password", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"babel", "enabled"}, o.Separator); fs.Changed(n) {
+	if n := "babel" + o.Separator + "enabled"; fs.Changed(n) {
 		v, err := fs.GetBool(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -731,7 +723,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Babel.Enabled = v
 		set("babel.enabled", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"babel", "router-id"}, o.Separator); fs.Changed(n) {
+	if n := "babel" + o.Separator + "router-id"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -743,7 +735,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Babel.RouterID = v
 		set("babel.router-id", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"olsr"}, o.Separator); fs.Changed(n) {
+	if n := "olsr"; fs.Changed(n) {
 		v, err := fs.GetBool(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -755,7 +747,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.OLSR = v
 		set("olsr", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"cors-hosts"}, o.Separator); fs.Changed(n) {
+	if n := "cors-hosts"; fs.Changed(n) {
 		v, err := fs.GetStringSlice(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -767,7 +759,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.CORSHosts = v
 		set("cors-hosts", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"trusted-proxies"}, o.Separator); fs.Changed(n) {
+	if n := "trusted-proxies"; fs.Changed(n) {
 		v, err := fs.GetStringSlice(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -779,7 +771,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.TrustedProxies = v
 		set("trusted-proxies", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"hibp-api-key"}, o.Separator); fs.Changed(n) {
+	if n := "hibp-api-key"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -791,7 +783,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.HIBPAPIKey = v
 		set("hibp-api-key", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"server-name"}, o.Separator); fs.Changed(n) {
+	if n := "server-name"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -803,7 +795,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.ServerName = v
 		set("server-name", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"supernode"}, o.Separator); fs.Changed(n) {
+	if n := "supernode"; fs.Changed(n) {
 		v, err := fs.GetBool(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -815,7 +807,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Supernode = v
 		set("supernode", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"node-ip"}, o.Separator); fs.Changed(n) {
+	if n := "node-ip"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -827,7 +819,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.NodeIP = v
 		set("node-ip", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"latitude"}, o.Separator); fs.Changed(n) {
+	if n := "latitude"; fs.Changed(n) {
 		v, err := fs.GetFloat64(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -839,7 +831,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Latitude = v
 		set("latitude", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"longitude"}, o.Separator); fs.Changed(n) {
+	if n := "longitude"; fs.Changed(n) {
 		v, err := fs.GetFloat64(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -851,7 +843,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Longitude = v
 		set("longitude", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"gridsquare"}, o.Separator); fs.Changed(n) {
+	if n := "gridsquare"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -863,7 +855,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Gridsquare = v
 		set("gridsquare", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"metrics", "enabled"}, o.Separator); fs.Changed(n) {
+	if n := "metrics" + o.Separator + "enabled"; fs.Changed(n) {
 		v, err := fs.GetBool(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -875,7 +867,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Metrics.Enabled = v
 		set("metrics.enabled", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"metrics", "node-exporter-host"}, o.Separator); fs.Changed(n) {
+	if n := "metrics" + o.Separator + "node-exporter-host"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -887,7 +879,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Metrics.NodeExporterHost = v
 		set("metrics.node-exporter-host", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"metrics", "port"}, o.Separator); fs.Changed(n) {
+	if n := "metrics" + o.Separator + "port"; fs.Changed(n) {
 		v, err := fs.GetInt(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -899,7 +891,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Metrics.Port = v
 		set("metrics.port", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"wireguard", "starting-address"}, o.Separator); fs.Changed(n) {
+	if n := "wireguard" + o.Separator + "starting-address"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -911,7 +903,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Wireguard.StartingAddress = v
 		set("wireguard.starting-address", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"wireguard", "starting-port"}, o.Separator); fs.Changed(n) {
+	if n := "wireguard" + o.Separator + "starting-port"; fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -923,7 +915,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Wireguard.StartingPort = v
 		set("wireguard.starting-port", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"session-secret"}, o.Separator); fs.Changed(n) {
+	if n := "session-secret"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -935,7 +927,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.SessionSecret = v
 		set("session-secret", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"lqm", "enabled"}, o.Separator); fs.Changed(n) {
+	if n := "lqm" + o.Separator + "enabled"; fs.Changed(n) {
 		v, err := fs.GetBool(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -947,7 +939,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.LQM.Enabled = v
 		set("lqm.enabled", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"walker"}, o.Separator); fs.Changed(n) {
+	if n := "walker"; fs.Changed(n) {
 		v, err := fs.GetBool(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -961,35 +953,36 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 	}
 	return nil
 }
+
 func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+	if tok.Kind() != jsontext.KindBeginObject {
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "log-level":
 			v, err := dec.ReadToken()
 			if err != nil {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.LogLevel = &str
 			default:
-				return fmt.Errorf("log-level: expected a string, got %v", v.Kind())
+				return configJSONError("log-level", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "port":
 			v, err := dec.ReadToken()
@@ -997,75 +990,117 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
-				num, err := v.Int()
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
+				raw, err := v.Int()
+				if err != nil {
+					return configJSONError("port", v, err)
+				}
+				if raw < math.MinInt || raw > math.MaxInt {
+					return configJSONError("port", v, fmt.Errorf("%d overflows int", raw))
+				}
+				num := int(raw)
+				s.Port = &num
+			default:
+				return configJSONError("port", v, fmt.Errorf("expected a number, got %v", v.Kind()))
+			}
+		case "password-salt":
+			if err := func() error {
+				v, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				val := int(num)
-				s.Port = &val
-			default:
-				return fmt.Errorf("port: expected a number, got %v", v.Kind())
-			}
-		case "password-salt":
-			v, err := dec.ReadToken()
-			if err != nil {
-				return err
-			}
-			switch v.Kind() {
-			case 'n':
-			case '"':
-				str := v.String()
-				s.PasswordSalt = &str
-			default:
-				return fmt.Errorf("password-salt: expected a string, got %v", v.Kind())
+				switch v.Kind() {
+				case jsontext.KindNull:
+				case jsontext.KindString:
+					str := v.String()
+					s.PasswordSalt = &str
+				default:
+					return configJSONError("password-salt", v, fmt.Errorf("expected a string, got %v", v.Kind()))
+				}
+				return nil
+			}(); err != nil {
+				return &configulator.ParseError{
+					Err:   errors.New("invalid value"),
+					Path:  "password-salt",
+					Value: "(redacted)",
+				}
 			}
 		case "pprof":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return configJSONError("pprof", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub pProfShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "pprof"); err != nil {
 					return err
 				}
 				s.PProf = &sub
 			}
 		case "postgres":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return configJSONError("postgres", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub postgresShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "postgres"); err != nil {
 					return err
 				}
 				s.Postgres = &sub
 			}
 		case "initial-admin-user-password":
-			v, err := dec.ReadToken()
-			if err != nil {
-				return err
-			}
-			switch v.Kind() {
-			case 'n':
-			case '"':
-				str := v.String()
-				s.InitialAdminUserPassword = &str
-			default:
-				return fmt.Errorf("initial-admin-user-password: expected a string, got %v", v.Kind())
+			if err := func() error {
+				v, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				switch v.Kind() {
+				case jsontext.KindNull:
+				case jsontext.KindString:
+					str := v.String()
+					s.InitialAdminUserPassword = &str
+				default:
+					return configJSONError("initial-admin-user-password", v, fmt.Errorf("expected a string, got %v", v.Kind()))
+				}
+				return nil
+			}(); err != nil {
+				return &configulator.ParseError{
+					Err:   errors.New("invalid value"),
+					Path:  "initial-admin-user-password",
+					Value: "(redacted)",
+				}
 			}
 		case "babel":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return configJSONError("babel", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub babelShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "babel"); err != nil {
 					return err
 				}
 				s.Babel = &sub
@@ -1076,34 +1111,34 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case 't', 'f':
+			case jsontext.KindNull:
+			case jsontext.KindTrue, jsontext.KindFalse:
 				b := v.Bool()
 				s.OLSR = &b
 			default:
-				return fmt.Errorf("olsr: expected a bool, got %v", v.Kind())
+				return configJSONError("olsr", v, fmt.Errorf("expected a bool, got %v", v.Kind()))
 			}
 		case "cors-hosts":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != '[' {
-					return fmt.Errorf("cors-hosts: expected an array, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginArray {
+					return configJSONError("cors-hosts", open, fmt.Errorf("expected an array, got %v", open.Kind()))
 				}
 				out := []string{}
-				for dec.PeekKind() != ']' {
+				for dec.PeekKind() != jsontext.KindEndArray {
 					v, err := dec.ReadToken()
 					if err != nil {
 						return err
 					}
-					if v.Kind() != '"' {
-						return fmt.Errorf("cors-hosts: expected a string element, got %v", v.Kind())
+					if v.Kind() != jsontext.KindString {
+						return configJSONError("cors-hosts"+"["+strconv.Itoa(len(out))+"]", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 					}
 					el := v.String()
 					out = append(out, el)
@@ -1114,26 +1149,26 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.CORSHosts = &out
 			}
 		case "trusted-proxies":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != '[' {
-					return fmt.Errorf("trusted-proxies: expected an array, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginArray {
+					return configJSONError("trusted-proxies", open, fmt.Errorf("expected an array, got %v", open.Kind()))
 				}
 				out := []string{}
-				for dec.PeekKind() != ']' {
+				for dec.PeekKind() != jsontext.KindEndArray {
 					v, err := dec.ReadToken()
 					if err != nil {
 						return err
 					}
-					if v.Kind() != '"' {
-						return fmt.Errorf("trusted-proxies: expected a string element, got %v", v.Kind())
+					if v.Kind() != jsontext.KindString {
+						return configJSONError("trusted-proxies"+"["+strconv.Itoa(len(out))+"]", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 					}
 					el := v.String()
 					out = append(out, el)
@@ -1144,17 +1179,26 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.TrustedProxies = &out
 			}
 		case "hibp-api-key":
-			v, err := dec.ReadToken()
-			if err != nil {
-				return err
-			}
-			switch v.Kind() {
-			case 'n':
-			case '"':
-				str := v.String()
-				s.HIBPAPIKey = &str
-			default:
-				return fmt.Errorf("hibp-api-key: expected a string, got %v", v.Kind())
+			if err := func() error {
+				v, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				switch v.Kind() {
+				case jsontext.KindNull:
+				case jsontext.KindString:
+					str := v.String()
+					s.HIBPAPIKey = &str
+				default:
+					return configJSONError("hibp-api-key", v, fmt.Errorf("expected a string, got %v", v.Kind()))
+				}
+				return nil
+			}(); err != nil {
+				return &configulator.ParseError{
+					Err:   errors.New("invalid value"),
+					Path:  "hibp-api-key",
+					Value: "(redacted)",
+				}
 			}
 		case "server-name":
 			v, err := dec.ReadToken()
@@ -1162,12 +1206,12 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.ServerName = &str
 			default:
-				return fmt.Errorf("server-name: expected a string, got %v", v.Kind())
+				return configJSONError("server-name", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "supernode":
 			v, err := dec.ReadToken()
@@ -1175,12 +1219,12 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case 't', 'f':
+			case jsontext.KindNull:
+			case jsontext.KindTrue, jsontext.KindFalse:
 				b := v.Bool()
 				s.Supernode = &b
 			default:
-				return fmt.Errorf("supernode: expected a bool, got %v", v.Kind())
+				return configJSONError("supernode", v, fmt.Errorf("expected a bool, got %v", v.Kind()))
 			}
 		case "node-ip":
 			v, err := dec.ReadToken()
@@ -1188,12 +1232,12 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.NodeIP = &str
 			default:
-				return fmt.Errorf("node-ip: expected a string, got %v", v.Kind())
+				return configJSONError("node-ip", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "latitude":
 			v, err := dec.ReadToken()
@@ -1201,16 +1245,15 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
 				num, err := v.Float()
 				if err != nil {
-					return err
+					return configJSONError("latitude", v, err)
 				}
-				val := num
-				s.Latitude = &val
+				s.Latitude = &num
 			default:
-				return fmt.Errorf("latitude: expected a number, got %v", v.Kind())
+				return configJSONError("latitude", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "longitude":
 			v, err := dec.ReadToken()
@@ -1218,16 +1261,15 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
 				num, err := v.Float()
 				if err != nil {
-					return err
+					return configJSONError("longitude", v, err)
 				}
-				val := num
-				s.Longitude = &val
+				s.Longitude = &num
 			default:
-				return fmt.Errorf("longitude: expected a number, got %v", v.Kind())
+				return configJSONError("longitude", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "gridsquare":
 			v, err := dec.ReadToken()
@@ -1235,58 +1277,88 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Gridsquare = &str
 			default:
-				return fmt.Errorf("gridsquare: expected a string, got %v", v.Kind())
+				return configJSONError("gridsquare", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "metrics":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return configJSONError("metrics", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub metricsShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "metrics"); err != nil {
 					return err
 				}
 				s.Metrics = &sub
 			}
 		case "wireguard":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return configJSONError("wireguard", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub wireguardShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "wireguard"); err != nil {
 					return err
 				}
 				s.Wireguard = &sub
 			}
 		case "session-secret":
-			v, err := dec.ReadToken()
-			if err != nil {
-				return err
-			}
-			switch v.Kind() {
-			case 'n':
-			case '"':
-				str := v.String()
-				s.SessionSecret = &str
-			default:
-				return fmt.Errorf("session-secret: expected a string, got %v", v.Kind())
+			if err := func() error {
+				v, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				switch v.Kind() {
+				case jsontext.KindNull:
+				case jsontext.KindString:
+					str := v.String()
+					s.SessionSecret = &str
+				default:
+					return configJSONError("session-secret", v, fmt.Errorf("expected a string, got %v", v.Kind()))
+				}
+				return nil
+			}(); err != nil {
+				return &configulator.ParseError{
+					Err:   errors.New("invalid value"),
+					Path:  "session-secret",
+					Value: "(redacted)",
+				}
 			}
 		case "lqm":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return configJSONError("lqm", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub lQMShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "lqm"); err != nil {
 					return err
 				}
 				s.LQM = &sub
@@ -1297,88 +1369,86 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case 't', 'f':
+			case jsontext.KindNull:
+			case jsontext.KindTrue, jsontext.KindFalse:
 				b := v.Bool()
 				s.Walker = &b
 			default:
-				return fmt.Errorf("walker: expected a bool, got %v", v.Kind())
+				return configJSONError("walker", v, fmt.Errorf("expected a bool, got %v", v.Kind()))
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return &configulator.UnknownKeyError{Path: configQuoteKey(key)}
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*configShadow)(nil)
+var _ json.UnmarshalerFrom = (*configShadow)(nil)
 
-func (s *pProfShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != '{' {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *pProfShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "enabled":
 			v, err := dec.ReadToken()
 			if err != nil {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case 't', 'f':
+			case jsontext.KindNull:
+			case jsontext.KindTrue, jsontext.KindFalse:
 				b := v.Bool()
 				s.Enabled = &b
 			default:
-				return fmt.Errorf("enabled: expected a bool, got %v", v.Kind())
+				return configJSONError(path+".enabled", v, fmt.Errorf("expected a bool, got %v", v.Kind()))
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return &configulator.UnknownKeyError{Path: path + "." + configQuoteKey(key)}
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*pProfShadow)(nil)
-
-func (s *postgresShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != '{' {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *postgresShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "host":
 			v, err := dec.ReadToken()
 			if err != nil {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Host = &str
 			default:
-				return fmt.Errorf("host: expected a string, got %v", v.Kind())
+				return configJSONError(path+".host", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "port":
 			v, err := dec.ReadToken()
@@ -1386,16 +1456,19 @@ func (s *postgresShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
-				num, err := v.Int()
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
+				raw, err := v.Int()
 				if err != nil {
-					return err
+					return configJSONError(path+".port", v, err)
 				}
-				val := int(num)
-				s.Port = &val
+				if raw < math.MinInt || raw > math.MaxInt {
+					return configJSONError(path+".port", v, fmt.Errorf("%d overflows int", raw))
+				}
+				num := int(raw)
+				s.Port = &num
 			default:
-				return fmt.Errorf("port: expected a number, got %v", v.Kind())
+				return configJSONError(path+".port", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "user":
 			v, err := dec.ReadToken()
@@ -1403,25 +1476,34 @@ func (s *postgresShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.User = &str
 			default:
-				return fmt.Errorf("user: expected a string, got %v", v.Kind())
+				return configJSONError(path+".user", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "password":
-			v, err := dec.ReadToken()
-			if err != nil {
-				return err
-			}
-			switch v.Kind() {
-			case 'n':
-			case '"':
-				str := v.String()
-				s.Password = &str
-			default:
-				return fmt.Errorf("password: expected a string, got %v", v.Kind())
+			if err := func() error {
+				v, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				switch v.Kind() {
+				case jsontext.KindNull:
+				case jsontext.KindString:
+					str := v.String()
+					s.Password = &str
+				default:
+					return configJSONError(path+".password", v, fmt.Errorf("expected a string, got %v", v.Kind()))
+				}
+				return nil
+			}(); err != nil {
+				return &configulator.ParseError{
+					Err:   errors.New("invalid value"),
+					Path:  path + ".password",
+					Value: "(redacted)",
+				}
 			}
 		case "database":
 			v, err := dec.ReadToken()
@@ -1429,50 +1511,48 @@ func (s *postgresShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Database = &str
 			default:
-				return fmt.Errorf("database: expected a string, got %v", v.Kind())
+				return configJSONError(path+".database", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return &configulator.UnknownKeyError{Path: path + "." + configQuoteKey(key)}
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*postgresShadow)(nil)
-
-func (s *babelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != '{' {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *babelShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "enabled":
 			v, err := dec.ReadToken()
 			if err != nil {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case 't', 'f':
+			case jsontext.KindNull:
+			case jsontext.KindTrue, jsontext.KindFalse:
 				b := v.Bool()
 				s.Enabled = &b
 			default:
-				return fmt.Errorf("enabled: expected a bool, got %v", v.Kind())
+				return configJSONError(path+".enabled", v, fmt.Errorf("expected a bool, got %v", v.Kind()))
 			}
 		case "router-id":
 			v, err := dec.ReadToken()
@@ -1480,50 +1560,48 @@ func (s *babelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.RouterID = &str
 			default:
-				return fmt.Errorf("router-id: expected a string, got %v", v.Kind())
+				return configJSONError(path+".router-id", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return &configulator.UnknownKeyError{Path: path + "." + configQuoteKey(key)}
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*babelShadow)(nil)
-
-func (s *metricsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != '{' {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *metricsShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "enabled":
 			v, err := dec.ReadToken()
 			if err != nil {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case 't', 'f':
+			case jsontext.KindNull:
+			case jsontext.KindTrue, jsontext.KindFalse:
 				b := v.Bool()
 				s.Enabled = &b
 			default:
-				return fmt.Errorf("enabled: expected a bool, got %v", v.Kind())
+				return configJSONError(path+".enabled", v, fmt.Errorf("expected a bool, got %v", v.Kind()))
 			}
 		case "node-exporter-host":
 			v, err := dec.ReadToken()
@@ -1531,12 +1609,12 @@ func (s *metricsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.NodeExporterHost = &str
 			default:
-				return fmt.Errorf("node-exporter-host: expected a string, got %v", v.Kind())
+				return configJSONError(path+".node-exporter-host", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "port":
 			v, err := dec.ReadToken()
@@ -1544,54 +1622,55 @@ func (s *metricsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
-				num, err := v.Int()
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
+				raw, err := v.Int()
 				if err != nil {
-					return err
+					return configJSONError(path+".port", v, err)
 				}
-				val := int(num)
-				s.Port = &val
+				if raw < math.MinInt || raw > math.MaxInt {
+					return configJSONError(path+".port", v, fmt.Errorf("%d overflows int", raw))
+				}
+				num := int(raw)
+				s.Port = &num
 			default:
-				return fmt.Errorf("port: expected a number, got %v", v.Kind())
+				return configJSONError(path+".port", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return &configulator.UnknownKeyError{Path: path + "." + configQuoteKey(key)}
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*metricsShadow)(nil)
-
-func (s *wireguardShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != '{' {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *wireguardShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "starting-address":
 			v, err := dec.ReadToken()
 			if err != nil {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.StartingAddress = &str
 			default:
-				return fmt.Errorf("starting-address: expected a string, got %v", v.Kind())
+				return configJSONError(path+".starting-address", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "starting-port":
 			v, err := dec.ReadToken()
@@ -1599,100 +1678,117 @@ func (s *wireguardShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
-				num, err := v.Uint()
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
+				raw, err := v.Uint()
 				if err != nil {
-					return err
+					return configJSONError(path+".starting-port", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("starting-port: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return configJSONError(path+".starting-port", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.StartingPort = &val
+				num := uint16(raw)
+				s.StartingPort = &num
 			default:
-				return fmt.Errorf("starting-port: expected a number, got %v", v.Kind())
+				return configJSONError(path+".starting-port", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return &configulator.UnknownKeyError{Path: path + "." + configQuoteKey(key)}
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*wireguardShadow)(nil)
-
-func (s *lQMShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != '{' {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *lQMShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "enabled":
 			v, err := dec.ReadToken()
 			if err != nil {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case 't', 'f':
+			case jsontext.KindNull:
+			case jsontext.KindTrue, jsontext.KindFalse:
 				b := v.Bool()
 				s.Enabled = &b
 			default:
-				return fmt.Errorf("enabled: expected a bool, got %v", v.Kind())
+				return configJSONError(path+".enabled", v, fmt.Errorf("expected a bool, got %v", v.Kind()))
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return &configulator.UnknownKeyError{Path: path + "." + configQuoteKey(key)}
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*lQMShadow)(nil)
+// configJSONError returns a ParseError for the JSON token v at path.
+func configJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *Config) PrintConfig() string {
+func (c Config) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("log-level = %v\n", c.LogLevel))
-	b.WriteString(fmt.Sprintf("port = %v\n", c.Port))
+	fmt.Fprintf(&b, "log-level = %v\n", c.LogLevel)
+	fmt.Fprintf(&b, "port = %v\n", c.Port)
 	b.WriteString("password-salt = (redacted)\n")
-	b.WriteString(fmt.Sprintf("pprof.enabled = %v\n", c.PProf.Enabled))
-	b.WriteString(fmt.Sprintf("postgres.host = %v\n", c.Postgres.Host))
-	b.WriteString(fmt.Sprintf("postgres.port = %v\n", c.Postgres.Port))
-	b.WriteString(fmt.Sprintf("postgres.user = %v\n", c.Postgres.User))
+	fmt.Fprintf(&b, "pprof.enabled = %v\n", c.PProf.Enabled)
+	fmt.Fprintf(&b, "postgres.host = %v\n", c.Postgres.Host)
+	fmt.Fprintf(&b, "postgres.port = %v\n", c.Postgres.Port)
+	fmt.Fprintf(&b, "postgres.user = %v\n", c.Postgres.User)
 	b.WriteString("postgres.password = (redacted)\n")
-	b.WriteString(fmt.Sprintf("postgres.database = %v\n", c.Postgres.Database))
+	fmt.Fprintf(&b, "postgres.database = %v\n", c.Postgres.Database)
 	b.WriteString("initial-admin-user-password = (redacted)\n")
-	b.WriteString(fmt.Sprintf("babel.enabled = %v\n", c.Babel.Enabled))
-	b.WriteString(fmt.Sprintf("babel.router-id = %v\n", c.Babel.RouterID))
-	b.WriteString(fmt.Sprintf("olsr = %v\n", c.OLSR))
-	b.WriteString(fmt.Sprintf("cors-hosts = %v\n", c.CORSHosts))
-	b.WriteString(fmt.Sprintf("trusted-proxies = %v\n", c.TrustedProxies))
+	fmt.Fprintf(&b, "babel.enabled = %v\n", c.Babel.Enabled)
+	fmt.Fprintf(&b, "babel.router-id = %v\n", c.Babel.RouterID)
+	fmt.Fprintf(&b, "olsr = %v\n", c.OLSR)
+	fmt.Fprintf(&b, "cors-hosts = %v\n", c.CORSHosts)
+	fmt.Fprintf(&b, "trusted-proxies = %v\n", c.TrustedProxies)
 	b.WriteString("hibp-api-key = (redacted)\n")
-	b.WriteString(fmt.Sprintf("server-name = %v\n", c.ServerName))
-	b.WriteString(fmt.Sprintf("supernode = %v\n", c.Supernode))
-	b.WriteString(fmt.Sprintf("node-ip = %v\n", c.NodeIP))
-	b.WriteString(fmt.Sprintf("latitude = %v\n", c.Latitude))
-	b.WriteString(fmt.Sprintf("longitude = %v\n", c.Longitude))
-	b.WriteString(fmt.Sprintf("gridsquare = %v\n", c.Gridsquare))
-	b.WriteString(fmt.Sprintf("metrics.enabled = %v\n", c.Metrics.Enabled))
-	b.WriteString(fmt.Sprintf("metrics.node-exporter-host = %v\n", c.Metrics.NodeExporterHost))
-	b.WriteString(fmt.Sprintf("metrics.port = %v\n", c.Metrics.Port))
-	b.WriteString(fmt.Sprintf("wireguard.starting-address = %v\n", c.Wireguard.StartingAddress))
-	b.WriteString(fmt.Sprintf("wireguard.starting-port = %v\n", c.Wireguard.StartingPort))
+	fmt.Fprintf(&b, "server-name = %v\n", c.ServerName)
+	fmt.Fprintf(&b, "supernode = %v\n", c.Supernode)
+	fmt.Fprintf(&b, "node-ip = %v\n", c.NodeIP)
+	fmt.Fprintf(&b, "latitude = %v\n", c.Latitude)
+	fmt.Fprintf(&b, "longitude = %v\n", c.Longitude)
+	fmt.Fprintf(&b, "gridsquare = %v\n", c.Gridsquare)
+	fmt.Fprintf(&b, "metrics.enabled = %v\n", c.Metrics.Enabled)
+	fmt.Fprintf(&b, "metrics.node-exporter-host = %v\n", c.Metrics.NodeExporterHost)
+	fmt.Fprintf(&b, "metrics.port = %v\n", c.Metrics.Port)
+	fmt.Fprintf(&b, "wireguard.starting-address = %v\n", c.Wireguard.StartingAddress)
+	fmt.Fprintf(&b, "wireguard.starting-port = %v\n", c.Wireguard.StartingPort)
 	b.WriteString("session-secret = (redacted)\n")
-	b.WriteString(fmt.Sprintf("lqm.enabled = %v\n", c.LQM.Enabled))
-	b.WriteString(fmt.Sprintf("walker = %v\n", c.Walker))
+	fmt.Fprintf(&b, "lqm.enabled = %v\n", c.LQM.Enabled)
+	fmt.Fprintf(&b, "walker = %v\n", c.Walker)
 	return b.String()
+}
+
+func configQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }
