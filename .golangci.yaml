@@ -51,6 +51,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - .*_configulator\.go$
 formatters:
   enable:
     - gci
@@ -61,3 +62,4 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      - .*_configulator\.go$
