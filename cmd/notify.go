@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/USA-RedDragon/configulator"
+	"github.com/USA-RedDragon/configulator/v2"
 	"github.com/USA-RedDragon/mesh-manager/internal/config"
 	"github.com/spf13/cobra"
 )

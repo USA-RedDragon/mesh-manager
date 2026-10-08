@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/USA-RedDragon/configulator"
+	"github.com/USA-RedDragon/configulator/v2"
 	"github.com/USA-RedDragon/mesh-manager/internal/config"
 	"github.com/USA-RedDragon/mesh-manager/internal/server/api/apimodels"
 	"github.com/USA-RedDragon/mesh-manager/internal/walker/walker"

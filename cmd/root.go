@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/USA-RedDragon/configulator"
+	"github.com/USA-RedDragon/configulator/v2"
 	"github.com/USA-RedDragon/mesh-manager/internal/config"
 	"github.com/lmittmann/tint"
 	"github.com/spf13/cobra"

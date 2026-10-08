@@ -6,7 +6,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/USA-RedDragon/configulator"
+	"github.com/USA-RedDragon/configulator/v2"
 	"github.com/USA-RedDragon/mesh-manager/internal/config"
 	"github.com/USA-RedDragon/mesh-manager/internal/db"
 	"github.com/USA-RedDragon/mesh-manager/internal/db/models"

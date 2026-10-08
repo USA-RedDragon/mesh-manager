@@ -1,5 +1,7 @@
 package config
 
+//go:generate go tool configulator -type Config
+
 import (
 	"errors"
 	"net"
