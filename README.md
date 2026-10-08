@@ -14,20 +14,20 @@ Configuration is provided via environment variables, CLI flags, or a `config.yam
 |-------------------------------|----------------|-----------------|-------------------------------|---------------------------------|-----------------------------------------------------------------------|
 | `log-level`                   | string         | `info`          | `LOG_LEVEL`                   | `--log-level`                   | Logging level for the application. One of debug, info, warn, or error |
 | `port`                        | integer        | `3333`          | `PORT`                        | `--port`                        | Port to listen on for HTTP requests                                   |
-| `password-salt`               | string         |                 | `PASSWORD_SALT`               | `--password-salt`               | Salt used for password hashing                                        |
+| `password-salt`               | string         |                 | `PASSWORD_SALT`               | `--password-salt`               | Salt used for password hashing (secret)                               |
 | `pprof.enabled`               | boolean        | `false`         | `PPROF_ENABLED`               | `--pprof.enabled`               | Enable pprof debugging                                                |
 | `postgres.host`               | string         |                 | `POSTGRES_HOST`               | `--postgres.host`               | PostgreSQL host                                                       |
 | `postgres.port`               | integer        | `5432`          | `POSTGRES_PORT`               | `--postgres.port`               | PostgreSQL port                                                       |
 | `postgres.user`               | string         |                 | `POSTGRES_USER`               | `--postgres.user`               | PostgreSQL user                                                       |
-| `postgres.password`           | string         |                 | `POSTGRES_PASSWORD`           | `--postgres.password`           | PostgreSQL password                                                   |
+| `postgres.password`           | string         |                 | `POSTGRES_PASSWORD`           | `--postgres.password`           | PostgreSQL password (secret)                                          |
 | `postgres.database`           | string         |                 | `POSTGRES_DATABASE`           | `--postgres.database`           | PostgreSQL database                                                   |
-| `initial-admin-user-password` | string         |                 | `INITIAL_ADMIN_USER_PASSWORD` | `--initial-admin-user-password` | Initial password for the admin user                                   |
+| `initial-admin-user-password` | string         |                 | `INITIAL_ADMIN_USER_PASSWORD` | `--initial-admin-user-password` | Initial password for the admin user (secret)                          |
 | `babel.enabled`               | boolean        | `false`         | `BABEL_ENABLED`               | `--babel.enabled`               | Enable Babel routing                                                  |
 | `babel.router-id`             | string         |                 | `BABEL_ROUTER_ID`             | `--babel.router-id`             | Babel router ID                                                       |
 | `olsr`                        | boolean        | `true`          | `OLSR`                        | `--olsr`                        | Enable OLSR routing                                                   |
 | `cors-hosts`                  | list of string |                 | `CORS_HOSTS`                  | `--cors-hosts`                  | CORS hosts for the API                                                |
 | `trusted-proxies`             | list of string |                 | `TRUSTED_PROXIES`             | `--trusted-proxies`             | Trusted proxies for the API                                           |
-| `hibp-api-key`                | string         |                 | `HIBP_API_KEY`                | `--hibp-api-key`                | Have I Been Pwned API key                                             |
+| `hibp-api-key`                | string         |                 | `HIBP_API_KEY`                | `--hibp-api-key`                | Have I Been Pwned API key (secret)                                    |
 | `server-name`                 | string         |                 | `SERVER_NAME`                 | `--server-name`                 | Server name                                                           |
 | `supernode`                   | boolean        |                 | `SUPERNODE`                   | `--supernode`                   | Enable supernode mode                                                 |
 | `node-ip`                     | string         |                 | `NODE_IP`                     | `--node-ip`                     | Node IP address                                                       |
@@ -39,7 +39,7 @@ Configuration is provided via environment variables, CLI flags, or a `config.yam
 | `metrics.port`                | integer        | `9100`          | `METRICS_PORT`                | `--metrics.port`                | Port for Prometheus metrics                                           |
 | `wireguard.starting-address`  | string         |                 | `WIREGUARD_STARTING_ADDRESS`  | `--wireguard.starting-address`  | Starting address for Wireguard                                        |
 | `wireguard.starting-port`     | integer        | `5527`          | `WIREGUARD_STARTING_PORT`     | `--wireguard.starting-port`     | Starting port for Wireguard                                           |
-| `session-secret`              | string         |                 | `SESSION_SECRET`              | `--session-secret`              | Session secret                                                        |
+| `session-secret`              | string         |                 | `SESSION_SECRET`              | `--session-secret`              | Session secret (secret)                                               |
 | `lqm.enabled`                 | boolean        | `true`          | `LQM_ENABLED`                 | `--lqm.enabled`                 | Enable Link Quality Monitoring                                        |
 | `walker`                      | boolean        | `false`         | `WALKER`                      | `--walker`                      | Enable periodic mesh walking to update meshmap                        |
 

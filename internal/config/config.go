@@ -24,7 +24,7 @@ type Postgres struct {
 	Host     string `name:"host" description:"PostgreSQL host"`
 	Port     int    `name:"port" description:"PostgreSQL port" default:"5432"`
 	User     string `name:"user" description:"PostgreSQL user"`
-	Password string `name:"password" description:"PostgreSQL password"`
+	Password string `name:"password" description:"PostgreSQL password" secret:"true"`
 	Database string `name:"database" description:"PostgreSQL database"`
 }
 
@@ -47,15 +47,15 @@ type Wireguard struct {
 type Config struct {
 	LogLevel                 LogLevel  `name:"log-level" description:"Logging level for the application. One of debug, info, warn, or error" default:"info"`
 	Port                     int       `name:"port" description:"Port to listen on for HTTP requests" default:"3333"`
-	PasswordSalt             string    `name:"password-salt" description:"Salt used for password hashing"`
+	PasswordSalt             string    `name:"password-salt" description:"Salt used for password hashing" secret:"true"`
 	PProf                    PProf     `name:"pprof" description:"pprof debugging settings"`
 	Postgres                 Postgres  `name:"postgres" description:"PostgreSQL settings"`
-	InitialAdminUserPassword string    `name:"initial-admin-user-password" description:"Initial password for the admin user"`
+	InitialAdminUserPassword string    `name:"initial-admin-user-password" description:"Initial password for the admin user" secret:"true"`
 	Babel                    Babel     `name:"babel" description:"Babel routing settings"`
 	OLSR                     bool      `name:"olsr" description:"Enable OLSR routing" default:"true"`
 	CORSHosts                []string  `name:"cors-hosts" description:"CORS hosts for the API"`
 	TrustedProxies           []string  `name:"trusted-proxies" description:"Trusted proxies for the API"`
-	HIBPAPIKey               string    `name:"hibp-api-key" description:"Have I Been Pwned API key"`
+	HIBPAPIKey               string    `name:"hibp-api-key" description:"Have I Been Pwned API key" secret:"true"`
 	ServerName               string    `name:"server-name" description:"Server name"`
 	Supernode                bool      `name:"supernode" description:"Enable supernode mode"`
 	NodeIP                   string    `name:"node-ip" description:"Node IP address"`
@@ -64,7 +64,7 @@ type Config struct {
 	Gridsquare               string    `name:"gridsquare" description:"Server gridsquare"`
 	Metrics                  Metrics   `name:"metrics" description:"Metrics settings"`
 	Wireguard                Wireguard `name:"wireguard" description:"Wireguard settings"`
-	SessionSecret            string    `name:"session-secret" description:"Session secret"`
+	SessionSecret            string    `name:"session-secret" description:"Session secret" secret:"true"`
 	LQM                      LQM       `name:"lqm" description:"Link Quality Monitoring settings"`
 	Walker                   bool      `name:"walker" description:"Enable periodic mesh walking to update meshmap" default:"false"`
 }

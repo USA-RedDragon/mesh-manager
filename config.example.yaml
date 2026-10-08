@@ -1,0 +1,73 @@
+# Sample configuration for Config.
+# Logging level for the application. One of debug, info, warn, or error
+log-level: "info"
+# Port to listen on for HTTP requests
+port: 3333
+# Salt used for password hashing
+# password-salt: "(secret)"
+# pprof debugging settings
+pprof:
+  # Enable pprof debugging
+  enabled: false
+# PostgreSQL settings
+postgres:
+  # PostgreSQL host
+  # host: ""
+  # PostgreSQL port
+  port: 5432
+  # PostgreSQL user
+  # user: ""
+  # PostgreSQL password
+  # password: "(secret)"
+  # PostgreSQL database
+  # database: ""
+# Initial password for the admin user
+# initial-admin-user-password: "(secret)"
+# Babel routing settings
+babel:
+  # Enable Babel routing
+  enabled: false
+  # Babel router ID
+  # router-id: ""
+# Enable OLSR routing
+olsr: true
+# CORS hosts for the API
+# cors-hosts: []
+# Trusted proxies for the API
+# trusted-proxies: []
+# Have I Been Pwned API key
+# hibp-api-key: "(secret)"
+# Server name
+# server-name: ""
+# Enable supernode mode
+supernode: false
+# Node IP address
+# node-ip: ""
+# Server latitude
+# latitude: 0.0
+# Server longitude
+# longitude: 0.0
+# Server gridsquare
+# gridsquare: ""
+# Metrics settings
+metrics:
+  # Enable Prometheus metrics
+  enabled: false
+  # Node exporter host for Prometheus metrics
+  node-exporter-host: "node-exporter"
+  # Port for Prometheus metrics
+  port: 9100
+# Wireguard settings
+wireguard:
+  # Starting address for Wireguard
+  # starting-address: ""
+  # Starting port for Wireguard
+  starting-port: 5527
+# Session secret
+# session-secret: "(secret)"
+# Link Quality Monitoring settings
+lqm:
+  # Enable Link Quality Monitoring
+  enabled: true
+# Enable periodic mesh walking to update meshmap
+walker: false

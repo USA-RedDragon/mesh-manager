@@ -12,6 +12,7 @@ import (
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/spf13/pflag"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -75,7 +76,7 @@ func ConfigSchema() *configulator.Schema[Config] {
 		DecodeFile:    configDecodeFile,
 	}
 }
-func configApplyDefaults(cfg *Config, set configulator.SetOrigin) error {
+func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
 	cfg.LogLevel = LogLevel("info")
 	set("log-level", configulator.LayerDefault, "default tag")
 	cfg.Port = 3333
@@ -100,7 +101,7 @@ func configApplyDefaults(cfg *Config, set configulator.SetOrigin) error {
 	set("walker", configulator.LayerDefault, "default tag")
 	return nil
 }
-func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, set configulator.SetOrigin, file string) error {
+func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -108,9 +109,9 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, set co
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *configShadow) applyTo(cfg *Config, set configulator.SetOrigin, file string) error {
+func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	if s.LogLevel != nil {
 		cfg.LogLevel = LogLevel(*s.LogLevel)
 		set("log-level", configulator.LayerFile, file)
@@ -371,13 +372,15 @@ func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.Se
 	}
 	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "cors-hosts"); true {
 		if v, ok := ec.Getenv(n); ok {
-			cfg.CORSHosts = configulator.SplitList(v, ec.ArraySeparator)
+			lst := configulator.SplitList(v, ec.ArraySeparator)
+			cfg.CORSHosts = lst
 			set("cors-hosts", configulator.LayerEnv, n)
 		}
 	}
 	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "trusted-proxies"); true {
 		if v, ok := ec.Getenv(n); ok {
-			cfg.TrustedProxies = configulator.SplitList(v, ec.ArraySeparator)
+			lst := configulator.SplitList(v, ec.ArraySeparator)
+			cfg.TrustedProxies = lst
 			set("trusted-proxies", configulator.LayerEnv, n)
 		}
 	}
@@ -554,44 +557,48 @@ func ConfigPFlagHooks() cpflag.Hooks[Config] {
 	}
 }
 func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	for _, name := range []string{strings.Join([]string{"log-level"}, o.Separator), strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"password-salt"}, o.Separator), strings.Join([]string{"pprof", "enabled"}, o.Separator), strings.Join([]string{"postgres", "host"}, o.Separator), strings.Join([]string{"postgres", "port"}, o.Separator), strings.Join([]string{"postgres", "user"}, o.Separator), strings.Join([]string{"postgres", "password"}, o.Separator), strings.Join([]string{"postgres", "database"}, o.Separator), strings.Join([]string{"initial-admin-user-password"}, o.Separator), strings.Join([]string{"babel", "enabled"}, o.Separator), strings.Join([]string{"babel", "router-id"}, o.Separator), strings.Join([]string{"olsr"}, o.Separator), strings.Join([]string{"cors-hosts"}, o.Separator), strings.Join([]string{"trusted-proxies"}, o.Separator), strings.Join([]string{"hibp-api-key"}, o.Separator), strings.Join([]string{"server-name"}, o.Separator), strings.Join([]string{"supernode"}, o.Separator), strings.Join([]string{"node-ip"}, o.Separator), strings.Join([]string{"latitude"}, o.Separator), strings.Join([]string{"longitude"}, o.Separator), strings.Join([]string{"gridsquare"}, o.Separator), strings.Join([]string{"metrics", "enabled"}, o.Separator), strings.Join([]string{"metrics", "node-exporter-host"}, o.Separator), strings.Join([]string{"metrics", "port"}, o.Separator), strings.Join([]string{"wireguard", "starting-address"}, o.Separator), strings.Join([]string{"wireguard", "starting-port"}, o.Separator), strings.Join([]string{"session-secret"}, o.Separator), strings.Join([]string{"lqm", "enabled"}, o.Separator), strings.Join([]string{"walker"}, o.Separator)} {
-		if fs.Lookup(name) != nil {
-			return fmt.Errorf("flag --%s already registered on this FlagSet", name)
+	names := []string{strings.Join([]string{"log-level"}, o.Separator), strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"password-salt"}, o.Separator), strings.Join([]string{"pprof", "enabled"}, o.Separator), strings.Join([]string{"postgres", "host"}, o.Separator), strings.Join([]string{"postgres", "port"}, o.Separator), strings.Join([]string{"postgres", "user"}, o.Separator), strings.Join([]string{"postgres", "password"}, o.Separator), strings.Join([]string{"postgres", "database"}, o.Separator), strings.Join([]string{"initial-admin-user-password"}, o.Separator), strings.Join([]string{"babel", "enabled"}, o.Separator), strings.Join([]string{"babel", "router-id"}, o.Separator), strings.Join([]string{"olsr"}, o.Separator), strings.Join([]string{"cors-hosts"}, o.Separator), strings.Join([]string{"trusted-proxies"}, o.Separator), strings.Join([]string{"hibp-api-key"}, o.Separator), strings.Join([]string{"server-name"}, o.Separator), strings.Join([]string{"supernode"}, o.Separator), strings.Join([]string{"node-ip"}, o.Separator), strings.Join([]string{"latitude"}, o.Separator), strings.Join([]string{"longitude"}, o.Separator), strings.Join([]string{"gridsquare"}, o.Separator), strings.Join([]string{"metrics", "enabled"}, o.Separator), strings.Join([]string{"metrics", "node-exporter-host"}, o.Separator), strings.Join([]string{"metrics", "port"}, o.Separator), strings.Join([]string{"wireguard", "starting-address"}, o.Separator), strings.Join([]string{"wireguard", "starting-port"}, o.Separator), strings.Join([]string{"session-secret"}, o.Separator), strings.Join([]string{"lqm", "enabled"}, o.Separator), strings.Join([]string{"walker"}, o.Separator)}
+	for i, name := range names {
+		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
+			}
 		}
 	}
-	fs.String(strings.Join([]string{"log-level"}, o.Separator), "info", "Logging level for the application. One of debug, info, warn, or error")
-	fs.Int(strings.Join([]string{"port"}, o.Separator), 3333, "Port to listen on for HTTP requests")
-	fs.String(strings.Join([]string{"password-salt"}, o.Separator), "", "Salt used for password hashing")
-	fs.Bool(strings.Join([]string{"pprof", "enabled"}, o.Separator), false, "Enable pprof debugging")
-	fs.String(strings.Join([]string{"postgres", "host"}, o.Separator), "", "PostgreSQL host")
-	fs.Int(strings.Join([]string{"postgres", "port"}, o.Separator), 5432, "PostgreSQL port")
-	fs.String(strings.Join([]string{"postgres", "user"}, o.Separator), "", "PostgreSQL user")
-	fs.String(strings.Join([]string{"postgres", "password"}, o.Separator), "", "PostgreSQL password")
-	fs.String(strings.Join([]string{"postgres", "database"}, o.Separator), "", "PostgreSQL database")
-	fs.String(strings.Join([]string{"initial-admin-user-password"}, o.Separator), "", "Initial password for the admin user")
-	fs.Bool(strings.Join([]string{"babel", "enabled"}, o.Separator), false, "Enable Babel routing")
-	fs.String(strings.Join([]string{"babel", "router-id"}, o.Separator), "", "Babel router ID")
-	fs.Bool(strings.Join([]string{"olsr"}, o.Separator), true, "Enable OLSR routing")
-	fs.StringSlice(strings.Join([]string{"cors-hosts"}, o.Separator), nil, "CORS hosts for the API")
-	fs.StringSlice(strings.Join([]string{"trusted-proxies"}, o.Separator), nil, "Trusted proxies for the API")
-	fs.String(strings.Join([]string{"hibp-api-key"}, o.Separator), "", "Have I Been Pwned API key")
-	fs.String(strings.Join([]string{"server-name"}, o.Separator), "", "Server name")
-	fs.Bool(strings.Join([]string{"supernode"}, o.Separator), false, "Enable supernode mode")
-	fs.String(strings.Join([]string{"node-ip"}, o.Separator), "", "Node IP address")
-	fs.Float64(strings.Join([]string{"latitude"}, o.Separator), 0.0, "Server latitude")
-	fs.Float64(strings.Join([]string{"longitude"}, o.Separator), 0.0, "Server longitude")
-	fs.String(strings.Join([]string{"gridsquare"}, o.Separator), "", "Server gridsquare")
-	fs.Bool(strings.Join([]string{"metrics", "enabled"}, o.Separator), false, "Enable Prometheus metrics")
-	fs.String(strings.Join([]string{"metrics", "node-exporter-host"}, o.Separator), "node-exporter", "Node exporter host for Prometheus metrics")
-	fs.Int(strings.Join([]string{"metrics", "port"}, o.Separator), 9100, "Port for Prometheus metrics")
-	fs.String(strings.Join([]string{"wireguard", "starting-address"}, o.Separator), "", "Starting address for Wireguard")
-	fs.Uint16(strings.Join([]string{"wireguard", "starting-port"}, o.Separator), uint16(5527), "Starting port for Wireguard")
-	fs.String(strings.Join([]string{"session-secret"}, o.Separator), "", "Session secret")
-	fs.Bool(strings.Join([]string{"lqm", "enabled"}, o.Separator), true, "Enable Link Quality Monitoring")
-	fs.Bool(strings.Join([]string{"walker"}, o.Separator), false, "Enable periodic mesh walking to update meshmap")
+	fs.String(names[0], "info", "Logging level for the application. One of debug, info, warn, or error")
+	fs.Int(names[1], 3333, "Port to listen on for HTTP requests")
+	fs.String(names[2], "", "Salt used for password hashing")
+	fs.Bool(names[3], false, "Enable pprof debugging")
+	fs.String(names[4], "", "PostgreSQL host")
+	fs.Int(names[5], 5432, "PostgreSQL port")
+	fs.String(names[6], "", "PostgreSQL user")
+	fs.String(names[7], "", "PostgreSQL password")
+	fs.String(names[8], "", "PostgreSQL database")
+	fs.String(names[9], "", "Initial password for the admin user")
+	fs.Bool(names[10], false, "Enable Babel routing")
+	fs.String(names[11], "", "Babel router ID")
+	fs.Bool(names[12], true, "Enable OLSR routing")
+	fs.StringSlice(names[13], nil, "CORS hosts for the API")
+	fs.StringSlice(names[14], nil, "Trusted proxies for the API")
+	fs.String(names[15], "", "Have I Been Pwned API key")
+	fs.String(names[16], "", "Server name")
+	fs.Bool(names[17], false, "Enable supernode mode")
+	fs.String(names[18], "", "Node IP address")
+	fs.Float64(names[19], 0.0, "Server latitude")
+	fs.Float64(names[20], 0.0, "Server longitude")
+	fs.String(names[21], "", "Server gridsquare")
+	fs.Bool(names[22], false, "Enable Prometheus metrics")
+	fs.String(names[23], "node-exporter", "Node exporter host for Prometheus metrics")
+	fs.Int(names[24], 9100, "Port for Prometheus metrics")
+	fs.String(names[25], "", "Starting address for Wireguard")
+	fs.Uint16(names[26], uint16(5527), "Starting port for Wireguard")
+	fs.String(names[27], "", "Session secret")
+	fs.Bool(names[28], true, "Enable Link Quality Monitoring")
+	fs.Bool(names[29], false, "Enable periodic mesh walking to update meshmap")
 	return nil
 }
-func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, set configulator.SetOrigin) error {
+func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"log-level"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
@@ -1659,20 +1666,20 @@ func (c *Config) PrintConfig() string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("log-level = %v\n", c.LogLevel))
 	b.WriteString(fmt.Sprintf("port = %v\n", c.Port))
-	b.WriteString(fmt.Sprintf("password-salt = %v\n", c.PasswordSalt))
+	b.WriteString("password-salt = (redacted)\n")
 	b.WriteString(fmt.Sprintf("pprof.enabled = %v\n", c.PProf.Enabled))
 	b.WriteString(fmt.Sprintf("postgres.host = %v\n", c.Postgres.Host))
 	b.WriteString(fmt.Sprintf("postgres.port = %v\n", c.Postgres.Port))
 	b.WriteString(fmt.Sprintf("postgres.user = %v\n", c.Postgres.User))
-	b.WriteString(fmt.Sprintf("postgres.password = %v\n", c.Postgres.Password))
+	b.WriteString("postgres.password = (redacted)\n")
 	b.WriteString(fmt.Sprintf("postgres.database = %v\n", c.Postgres.Database))
-	b.WriteString(fmt.Sprintf("initial-admin-user-password = %v\n", c.InitialAdminUserPassword))
+	b.WriteString("initial-admin-user-password = (redacted)\n")
 	b.WriteString(fmt.Sprintf("babel.enabled = %v\n", c.Babel.Enabled))
 	b.WriteString(fmt.Sprintf("babel.router-id = %v\n", c.Babel.RouterID))
 	b.WriteString(fmt.Sprintf("olsr = %v\n", c.OLSR))
 	b.WriteString(fmt.Sprintf("cors-hosts = %v\n", c.CORSHosts))
 	b.WriteString(fmt.Sprintf("trusted-proxies = %v\n", c.TrustedProxies))
-	b.WriteString(fmt.Sprintf("hibp-api-key = %v\n", c.HIBPAPIKey))
+	b.WriteString("hibp-api-key = (redacted)\n")
 	b.WriteString(fmt.Sprintf("server-name = %v\n", c.ServerName))
 	b.WriteString(fmt.Sprintf("supernode = %v\n", c.Supernode))
 	b.WriteString(fmt.Sprintf("node-ip = %v\n", c.NodeIP))
@@ -1684,7 +1691,7 @@ func (c *Config) PrintConfig() string {
 	b.WriteString(fmt.Sprintf("metrics.port = %v\n", c.Metrics.Port))
 	b.WriteString(fmt.Sprintf("wireguard.starting-address = %v\n", c.Wireguard.StartingAddress))
 	b.WriteString(fmt.Sprintf("wireguard.starting-port = %v\n", c.Wireguard.StartingPort))
-	b.WriteString(fmt.Sprintf("session-secret = %v\n", c.SessionSecret))
+	b.WriteString("session-secret = (redacted)\n")
 	b.WriteString(fmt.Sprintf("lqm.enabled = %v\n", c.LQM.Enabled))
 	b.WriteString(fmt.Sprintf("walker = %v\n", c.Walker))
 	return b.String()
