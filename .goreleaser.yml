@@ -9,65 +9,25 @@ release:
     name: mesh-manager
   skip_upload: true
 
-dockers:
-  - image_templates:
-      - "ghcr.io/usa-reddragon/mesh-manager:{{ .Tag }}-amd64"
-      - "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}-amd64"
-      - "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}.{{ .Minor }}-amd64"
-      - "ghcr.io/usa-reddragon/mesh-manager:latest-amd64"
-    use: buildx
-    goarch: amd64
+dockers_v2:
+  - images:
+      - "ghcr.io/usa-reddragon/{{ .ProjectName }}"
+    tags:
+      - "{{ .Tag }}"
+      - "v{{ .Major }}"
+      - "v{{ .Major }}.{{ .Minor }}"
+      - latest
     extra_files:
       - docker/rootfs
       - frontend
-    build_flag_templates:
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - --label=org.opencontainers.image.licenses=AGPL-3.0-or-later
-      - --label=org.opencontainers.image.url=https://github.com/USA-RedDragon/{{ .ProjectName }}
-      - --label=org.opencontainers.image.source=https://github.com/USA-RedDragon/{{ .ProjectName }}
-      - "--platform=linux/amd64"
-  - image_templates:
-      - "ghcr.io/usa-reddragon/mesh-manager:{{ .Tag }}-arm64"
-      - "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}-arm64"
-      - "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}.{{ .Minor }}-arm64"
-      - "ghcr.io/usa-reddragon/mesh-manager:latest-arm64"
-    use: buildx
-    goarch: arm64
-    extra_files:
-      - docker/rootfs
-      - frontend
-    build_flag_templates:
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - --label=org.opencontainers.image.licenses=AGPL-3.0-or-later
-      - --label=org.opencontainers.image.url=https://github.com/USA-RedDragon/{{ .ProjectName }}
-      - --label=org.opencontainers.image.source=https://github.com/USA-RedDragon/{{ .ProjectName }}
-      - "--platform=linux/arm64"
-
-docker_manifests:
-  - name_template: "ghcr.io/usa-reddragon/mesh-manager:{{ .Tag }}"
-    image_templates:
-      - "ghcr.io/usa-reddragon/mesh-manager:{{ .Tag }}-amd64"
-      - "ghcr.io/usa-reddragon/mesh-manager:{{ .Tag }}-arm64"
-  - name_template: "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}"
-    image_templates:
-      - "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}-amd64"
-      - "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}-arm64"
-  - name_template: "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}.{{ .Minor }}"
-    image_templates:
-      - "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}.{{ .Minor }}-amd64"
-      - "ghcr.io/usa-reddragon/mesh-manager:v{{ .Major }}.{{ .Minor }}-arm64"
-  - name_template: "ghcr.io/usa-reddragon/mesh-manager:latest"
-    image_templates:
-      - "ghcr.io/usa-reddragon/mesh-manager:latest-amd64"
-      - "ghcr.io/usa-reddragon/mesh-manager:latest-arm64"
+    labels:
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.title": "{{ .ProjectName }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.licenses": AGPL-3.0-or-later
+      "org.opencontainers.image.url": "https://github.com/USA-RedDragon/{{ .ProjectName }}"
+      "org.opencontainers.image.source": "https://github.com/USA-RedDragon/{{ .ProjectName }}"
 
 builds:
   - main: .

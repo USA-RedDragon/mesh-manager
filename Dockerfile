@@ -77,5 +77,6 @@ RUN --mount=type=bind,from=raven-clone,source=/raven/platforms/aredn/platform.uc
 
 RUN rm -rf /etc/s6/olsrd
 
-COPY mesh-manager /usr/bin/mesh-manager
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/mesh-manager /usr/bin/mesh-manager
 CMD ["/usr/bin/start.sh"]
