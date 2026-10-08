@@ -35,7 +35,7 @@ RUN git clone https://git.openwrt.org/project/usign.git /usign-src && \
 FROM ghcr.io/usa-reddragon/mesh-base:main@sha256:33a7dfc56bfced6ce8c2a3216acdcd7451c4cf75468091536254113637ded481
 
 COPY --from=frontend-build /app/dist /www
-COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:39153b8ba5336f6fcc4d9c63c00d2924e1ba6d90cdca62f7896c32db43c0e550 /usr/share/nginx/html /meshmap
+COPY --from=ghcr.io/usa-reddragon/meshmap-mesh-manager:k8s@sha256:09b44e3408b267578a93d6f346af3befa5204f9d5cc02759cbdb713237c66e27 /usr/share/nginx/html /meshmap
 
 RUN apk add --no-cache \
     nginx \
