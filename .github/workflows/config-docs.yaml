@@ -29,7 +29,7 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
 
-      - uses: USA-RedDragon/reusable-actions/configulator-docs@6271608d4971ff34aa8b1c3ad4c61400c061e30d # v2.0.23
+      - uses: USA-RedDragon/reusable-actions/configulator-docs@529a6c6e160b4039d6251284544c13a806f65156 # v2.0.29
         with:
           dir: internal/config
           type: Config
