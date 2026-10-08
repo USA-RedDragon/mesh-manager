@@ -1,0 +1,37 @@
+name: Config Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: "${{ github.workflow }} @ ${{ github.ref }}"
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  config-docs:
+    name: config docs
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.AUTO_COMMIT_APP_ID }}
+          private-key: ${{ secrets.AUTO_COMMIT_APP_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: USA-RedDragon/reusable-actions/configulator-docs@c7f24b7a3dc1110838186b173b1f1a2a65ff1c91 # v2.0.22
+        with:
+          dir: internal/config
+          type: Config
+          git-user-name: usa-reddragon-auto-commit-bot[bot]
+          git-user-email: usa-reddragon-auto-commit-bot[bot]@users.noreply.github.com
