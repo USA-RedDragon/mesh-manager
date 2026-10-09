@@ -2,6 +2,7 @@
 import type { ColumnDef } from '@tanstack/vue-table'
 import { onMounted, ref } from 'vue'
 import DataTable from './datatable/DataTable.vue'
+import type { DataTableFeatures } from './datatable/features'
 import API from '../services/API'
 
 import { h } from 'vue'
@@ -29,7 +30,7 @@ interface Node {
   etx?: number | null
 }
 
-const columns: ColumnDef<Node>[] = [
+const columns: ColumnDef<DataTableFeatures, Node>[] = [
   {
     accessorKey: 'hostname',
     header: () => h('div', {  }, 'Name'),

@@ -5,6 +5,7 @@ import { h, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import DataTable from './datatable/DataTable.vue'
+import type { DataTableFeatures } from './datatable/features'
 import { Button } from '@/components/ui/button'
 import API from '@/services/API'
 
@@ -19,7 +20,7 @@ const totalRecords = ref(0)
 const pageSize = ref(10)
 const loading = ref(false)
 
-const columns: ColumnDef<User>[] = [
+const columns: ColumnDef<DataTableFeatures, User>[] = [
   {
     accessorKey: 'id',
     header: () => h('span', 'ID'),

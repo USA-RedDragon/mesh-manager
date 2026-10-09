@@ -7,6 +7,7 @@ import { RouterLink } from 'vue-router'
 
 import ClickToCopy from './ClickToCopy.vue'
 import DataTable from './datatable/DataTable.vue'
+import type { DataTableFeatures } from './datatable/features'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import API from '@/services/API'
@@ -79,8 +80,8 @@ function formatMs(value?: number | null) {
   return `${Math.round(value)} ms`
 }
 
-const columns = computed<ColumnDef<Tunnel>[]>(() => {
-  const shared: ColumnDef<Tunnel>[] = [
+const columns = computed<ColumnDef<DataTableFeatures, Tunnel>[]>(() => {
+  const shared: ColumnDef<DataTableFeatures, Tunnel>[] = [
     {
       accessorKey: 'enabled',
       header: () => h('span', 'Enabled'),
@@ -159,7 +160,7 @@ const columns = computed<ColumnDef<Tunnel>[]>(() => {
     },
   ]
 
-  const adminOnly: ColumnDef<Tunnel>[] = [
+  const adminOnly: ColumnDef<DataTableFeatures, Tunnel>[] = [
     {
       accessorKey: 'password',
       header: () => h('span', 'Password'),
@@ -208,7 +209,7 @@ const columns = computed<ColumnDef<Tunnel>[]>(() => {
     },
   ]
 
-  const userOnly: ColumnDef<Tunnel>[] = [
+  const userOnly: ColumnDef<DataTableFeatures, Tunnel>[] = [
     {
       accessorKey: 'rx_bytes_per_sec',
       header: () => h('span', 'Bandwidth'),

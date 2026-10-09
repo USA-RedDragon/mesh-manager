@@ -1,5 +1,6 @@
-<script setup lang="ts" generic="TData">
-import { type Table } from '@tanstack/vue-table'
+<script setup lang="ts" generic="TData extends RowData">
+import type { RowData, Table } from '@tanstack/vue-table'
+import { computed } from 'vue'
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,11 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import type { DataTableFeatures } from './features'
 
 interface DataTablePaginationProps {
-  table: Table<TData>
+  table: Table<DataTableFeatures, TData>
 }
-defineProps<DataTablePaginationProps>()
+const props = defineProps<DataTablePaginationProps>()
+
+const pagination = computed(() => props.table.atoms.pagination.get())
 </script>
 
 <template>
@@ -30,11 +34,11 @@ defineProps<DataTablePaginationProps>()
           Rows per page
         </p>
         <Select
-          :model-value="`${table.getState().pagination.pageSize}`"
+          :model-value="`${pagination.pageSize}`"
           @update:model-value="table.setPageSize(Number($event))"
         >
           <SelectTrigger class="h-8 w-[70px]">
-            <SelectValue :placeholder="`${table.getState().pagination.pageSize}`" />
+            <SelectValue :placeholder="`${pagination.pageSize}`" />
           </SelectTrigger>
           <SelectContent side="top">
             <SelectItem v-for="pageSize in [10, 20, 30, 40, 50]" :key="pageSize" :value="`${pageSize}`">
@@ -44,7 +48,7 @@ defineProps<DataTablePaginationProps>()
         </Select>
       </div>
       <div class="flex w-[100px] items-center justify-center text-sm font-medium">
-        Page {{ table.getState().pagination.pageIndex + 1 }} of
+        Page {{ pagination.pageIndex + 1 }} of
         {{ table.getPageCount() }}
       </div>
       <div class="flex items-center space-x-2">
