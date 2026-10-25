@@ -50,7 +50,7 @@ jobs:
 
       - run: docker run --privileged --rm tonistiigi/binfmt --install all
 
-      - uses: Wandalen/wretry.action@master
+      - uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a # master
         with:
           command: CGO_ENABLED=0 go test -p 2 -v ./...
           attempt_limit: 3
