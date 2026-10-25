@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   frontend:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
 
@@ -35,7 +35,7 @@ jobs:
           retention-days: 1
 
   frontend-eslint:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       checks: write
@@ -70,7 +70,7 @@ jobs:
           path: frontend/eslint_report.json
 
   frontend-unit-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       checks: write
@@ -110,7 +110,7 @@ jobs:
           job_name: Tests
 
   frontend-e2e-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       checks: write
@@ -172,7 +172,7 @@ jobs:
           retention-days: 30
 
   backend-benchmark-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       checks: write
@@ -189,7 +189,7 @@ jobs:
       - run: CGO_ENABLED=0 go test -run ^$ -benchmem -bench=. ./...
 
   backend-race-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       checks: write
@@ -208,7 +208,7 @@ jobs:
           go test ./... -race
 
   backend-unit-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       checks: write
@@ -260,7 +260,7 @@ jobs:
           retention-days: 30
 
   backend-unit-tests-coverage:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       checks: write
