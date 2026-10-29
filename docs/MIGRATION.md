@@ -41,12 +41,18 @@ Do not delete the mesh-manager containers or database until the new node works.
 
 ## Step 2: Generate the migration report
 
-Use a mesh-manager build that has the `migrate` subcommand. Run it with the same configuration and database as the node. With docker compose:
+No release contains the `migrate` subcommand, so build it from the `main` branch. The binary is static, so you can copy it into the running container and run it there with the node's own configuration and database:
 
 ```sh
-docker compose exec cloud-tunnel mesh-manager migrate -o /tmp/migration.md
+git clone https://github.com/USA-RedDragon/mesh-manager
+cd mesh-manager
+CGO_ENABLED=0 go build -o mesh-manager-migrate .
+docker compose cp mesh-manager-migrate cloud-tunnel:/tmp/mesh-manager-migrate
+docker compose exec cloud-tunnel /tmp/mesh-manager-migrate migrate -o /tmp/migration.md
 docker compose cp cloud-tunnel:/tmp/migration.md ./migration.md
 ```
+
+Use your own service name in place of `cloud-tunnel`.
 
 The report has the node identity, the routing and supernode settings, every tunnel with ready-to-run commands, and the known parity gaps. Keep the report secret. It contains WireGuard private keys.
 
