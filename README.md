@@ -1,5 +1,16 @@
 # Mesh Manager
 
+> [!WARNING]
+> **This project is deprecated and archived. It is no longer maintained.**
+>
+> Run official, unmodified AREDN® firmware instead, in a virtual machine or on bare metal. AREDN® firmware has WireGuard tunnels, supernode mode, Babel routing and Prometheus metrics built in. For the mesh map, use the `meshmap` AREDN® package from [mesh-walker](https://github.com/USA-RedDragon/mesh-walker).
+>
+> To move an existing node, follow [docs/MIGRATION.md](docs/MIGRATION.md). The `migrate` subcommand prints a report for your node, with ready-to-run commands that keep your node name, mesh IP, tunnels and WireGuard keys. Remote tunnel partners do not need to change anything.
+>
+> The rest of this README stays as reference for existing installs.
+>
+> AREDN® is a registered trademark of Amateur Radio Emergency Data Network, Inc. This project is not affiliated with, endorsed by, or sanctioned by AREDN, Inc.
+
 [![Release](https://github.com/USA-RedDragon/mesh-manager/actions/workflows/release.yaml/badge.svg)](https://github.com/USA-RedDragon/mesh-manager/actions/workflows/release.yaml) [![go.mod version](https://img.shields.io/github/go-mod/go-version/USA-RedDragon/mesh-manager.svg)](https://github.com/USA-RedDragon/mesh-manager) [![coverage](https://raw.githubusercontent.com/USA-RedDragon/mesh-manager/main/.github/badges/coverage.svg)](https://github.com/USA-RedDragon/mesh-manager/actions) [![License](https://badgen.net/github/license/USA-RedDragon/mesh-manager)](https://github.com/USA-RedDragon/mesh-manager/blob/main/LICENSE) [![Release](https://img.shields.io/github/release/USA-RedDragon/mesh-manager.svg)](https://github.com/USA-RedDragon/mesh-manager/releases/)
 
 This project is a glorified configuration generator with an API and web interface.
